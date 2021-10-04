@@ -1,6 +1,7 @@
 from _thread import start_new_thread
 from database import *
 import socket
+
 try:
     from http_parser.parser import HttpParser
 except ImportError:
@@ -10,17 +11,10 @@ HOST = ''
 PORT = 8080
 BUF_SIZE = 4096
 
-cert_dir = "certs"
-cert_key = "cert.key"
-ca_cert = "ca.crt"
-ca_key = "ca.key"
-
 
 def receive_data_from_socket(sock):
     parser = HttpParser()
     resp = b''
-    is_headers_end = False
-    headers = b''
     while not parser.is_message_complete():
         data = sock.recv(BUF_SIZE)
         if not data:
@@ -28,23 +22,12 @@ def receive_data_from_socket(sock):
 
         parser.execute(data, len(data))
 
-        if not is_headers_end:
-            if data.find(b"charset=UTF-8") == -1:
-                headers += data
-            else:
-                split_idx = data.find(b"charset=UTF-8") + len(b"charset=UTF-8")
-                headers += data[:split_idx]
-                resp += data[split_idx:]
-                is_headers_end = True
-        else:
-            resp += data
-    print(headers)
-    print(resp)
+        resp += data
     return resp, parser
 
 
 def cleanup_http_request(parser, data):
-    data_array = data.decode("utf-8").split("\n")
+    data_array = data.decode("utf-8").split("\r\n")
     print(data_array)
     url = ""
     if parser.is_headers_complete():
@@ -54,21 +37,29 @@ def cleanup_http_request(parser, data):
         return None, None
     data_array[0] = data_array[0].replace(url, parser.get_path())
 
-    host = parser.get_headers()['host']
+    host = parser.get_headers()['host'].strip()
 
     request_to_host = ""
     for line in data_array:
         if line.find("Proxy-Connection") != -1:
+            request_to_host += "Connection: close\r\n"
+        # elif line.find("Accept-Encoding: gzip, deflate") != -1:
+        #     request_to_host += "Accept-Encoding: deflate\r\n"
+        else:
             request_to_host += line + "\n"
 
     return request_to_host, host
 
 
 def http_request(request, host, port):
-    req_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    req_socket.connect((host.strip(), port))
-    req_socket.sendall(request.encode("utf-8"))
-    return req_socket
+    sock_req = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock_req.connect((host, port))
+    except:
+        sock_req.close()
+        return None
+    sock_req.sendall(request.encode("utf-8"))
+    return sock_req
 
 
 def proxy_http(data, parser, sock, DB):
@@ -81,9 +72,11 @@ def proxy_http(data, parser, sock, DB):
 
 
 def recv_from_host(request, host, port):
-    req_socket = http_request(request, host, port)
-    reply, _ = receive_data_from_socket(req_socket)
-    req_socket.close()
+    sock_req = http_request(request, host, port)
+    if not sock_req:
+        return None
+    reply, _ = receive_data_from_socket(sock_req)
+    sock_req.close()
     return reply
 
 
@@ -101,14 +94,15 @@ if __name__ == '__main__':
 
         try:
             sock, address = sock.accept()
-            print('Connection established with ', address)
             data, parser = receive_data_from_socket(sock)
 
-            print("Method:", parser.get_method())
             if parser.get_method() == "CONNECT":
-                continue
-            print("HTTP request detected")
-            start_new_thread(proxy_http, (data, parser, sock, DB))
+                print("HTTPS request detected")
+                sock.close()
+            else:
+                print("Method:", parser.get_method())
+                print("HTTP request detected")
+                start_new_thread(proxy_http, (data, parser, sock, DB))
 
         except KeyboardInterrupt:
             sock.close()
@@ -116,4 +110,3 @@ if __name__ == '__main__':
         except Exception as e:
             sock.close()
             print(e.args)
-            exit()
