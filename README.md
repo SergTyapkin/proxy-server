@@ -13,7 +13,8 @@ python3 web_interface.py
 Функционал:
 ```
 / – список запросов
-/requests/id – вывод 1 запроса
+/request - отправка кастомного запроса
+/requests/id – вывод одного запроса
 /repeat/id – повтор одного запроса
-/param-miner/id?param=param_name – проверка запроса Param-miner'ом
+/param-miner/id – проверка запроса Param-miner'ом
 ```
