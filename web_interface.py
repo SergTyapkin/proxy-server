@@ -1,14 +1,17 @@
+import urllib
 from string import Template
 
 from flask import Flask, render_template, request
 from database import *
 
-# from scan import check_request
-from main import recv_from_host
-from param_miner import check_request
+from main import http_request
+from param_checker import check_request
+from utils import read_config
 
-app = Flask(__name__)
-DB = Database()
+
+app = Flask(__name__, static_folder="")
+config = read_config("config.json")
+DB = Database(config)
 
 
 @app.route('/')
@@ -21,47 +24,54 @@ def get_requests():
 @app.route('/request', methods=['GET', 'POST'])
 def send_request():
     if request.method == 'GET':
-        return render_template("request.html")
+        return render_template("send_request.html", host=request.args.get('host'), request=request.args.get('request'))
 
-    req = [request.form.get('host'), request.form.get('request')]
-    if not req[0]:  # autocomplete Host
-        host_end_idx = host_start_idx = req[1].find("Host:") + len("Host:")
+    host = request.form.get('host')
+    req = request.form.get('request')
+    req += '\n\n'
+    if not host:  # autocomplete Host
+        host_end_idx = host_start_idx = req.find("Host:") + len("Host:")
 
-        while req[1][host_end_idx] not in ['\n', '/'] and host_end_idx < len(req[1]):
+        while req[host_end_idx] not in ['\n', '/'] and host_end_idx < len(req):
             host_end_idx += 1
-        req[0] = (req[1][host_start_idx: host_end_idx]).strip()
+        host = (req[host_start_idx: host_end_idx]).strip()
 
-    # url_start_idx = req[1].find("GET") + len("GET")
-    # url_end_idx = req[1].find("HTTP")
-    # url = (req[1][url_start_idx: url_end_idx]).strip()
-    # req[1] = req[1][:url_start_idx] + url + req[1][url_end_idx:]
+    reply = ""
+    try:
+        reply, parser = http_request(req, host, 80)
+    except:
+        pass
 
-    req[1] += '\r\n\r\n'
-
-    reply = recv_from_host(req[1], req[0], 80)
     if not reply:
-        return "<button onclick=\"history.go(-1)\">Назад</button>" + \
-               "<h1>No response</h1>"
-    return "<button onclick=\"history.go(-1)\">Назад</button><br>".encode() + reply
+        reply = "No response".encode()
+    else:
+        DB.insert_request(req, host)
+        headers_end_idx = reply.find(b'\r\n\r\n')
+        reply = b'<div class=headers>' + reply[:headers_end_idx].replace(b'\r\n', b'<br>') + b'</div>' + \
+                b'<div class=response>' + reply[headers_end_idx:] + b'</div>'
+
+    file = open("./templates/response.html", "r")
+    html = file.read()
+    html = html.encode().replace(b"{{ response }}", reply)
+    file.close()
+    return html
 
 
 @app.route('/request/<int:id>')
 def get_request_by_id(id):
     req = DB.select_request_by_id(id)
     pretty_req = get_html_requests([req])
-    return render_template("requests.html", table=pretty_req) + \
-           "<button onclick=\"document.location='/'\">На главную</button>" + \
-           "<button onclick=\"document.location='/repeat/" + str(id) + "'\">Повторить</button>" + \
-           "<button onclick=\"document.location='/param-miner/" + str(id) + "'\">Проверить param-miner\'ом</button>"
+    return render_template("request.html", table=pretty_req, id=id, host=req[1], request=urllib.parse.quote_plus(req[2]))
 
 
 @app.route('/param-miner/<int:id>')
 def check_request_page(id):
     param_name = request.args.get('param')
-    if not param_name:
-        return render_template("check_request.html")
 
     req = list(DB.select_request_by_id(id))
+    pretty_req = get_html_requests([req])
+    if not param_name:
+        return render_template("check_request.html", table=pretty_req)
 
     return check_request(req, param_name)
 
@@ -73,20 +83,24 @@ def get_html_requests(requests):
             <th>id</th>
             <th>host</th>
             <th>request</th>
+            <th>Have TLS</th>
         </tr>
     </thead>
     <tbody>
     """
+    tbody = ""
     for req in requests:
-        table += """
+        row = """
         <tr onclick="window.location.href='/request/%s'" style="cursor: pointer">
             <td>%s</td>
             <td>%s</td>
             <td>%s</td>
+            <td>%s</td>
         </tr>
-        """ % (req[0], req[0], req[1], req[2].replace('\n', '<br>'))
+        """ % (req[0], req[0], req[1], req[2].replace('\n', '<br>'), req[3])
+        tbody = row + tbody
 
-    table += "</tbody></table>"
+    table += tbody + "</tbody></table>"
     return table
 
 
@@ -94,15 +108,27 @@ def get_html_requests(requests):
 def repeat_request(id):
     req = list(DB.select_request_by_id(id))
 
-    # url_start_idx = req[2].find("GET") + len("GET")
-    # url_end_idx = req[2].find("HTTP")
-    # url = (req[2][url_start_idx: url_end_idx]).strip()
-    # req[2] = req[2][:url_start_idx] + url + req[2][url_end_idx:]
-
-    reply = recv_from_host(req[2], req[1], 80)
+    reply, parser = http_request(req[2], req[1], 80)
     if not reply:
-        return "No response"
-    return "<button onclick=\"history.go(-1)\">К запросу</button><br>".encode() + reply
+        reply = "No response".encode()
+    else:
+        headers_end_idx = reply.find(b'\r\n\r\n')
+        reply = b'<div class=headers>' + reply[:headers_end_idx].replace(b'\r\n', b'<br>') + b'</div>' + \
+                b'<div class=response>' + reply[headers_end_idx:] + b'</div>'
+
+    file = open("./templates/response.html", "r")
+    html = file.read()
+    html = html.encode().replace(b"{{ response }}", reply)
+    file.close()
+    return html
+
+
+@app.route("/clear")
+def clear_db():
+    DB.clear()
+
+    return "<h1>База данных очищена</h1>" \
+           "<button onclick=\"document.location='/'\">На главную</button>"
 
 
 @app.errorhandler(404)
@@ -112,4 +138,4 @@ def show_404(_):
 
 
 if __name__ == '__main__':
-    app.run(port=8000)
+    app.run(port=config['web_interface_port'])

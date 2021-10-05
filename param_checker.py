@@ -1,4 +1,4 @@
-from main import recv_from_host
+from main import http_request
 from utils import str_between
 
 good_params = [
@@ -29,7 +29,7 @@ def check_request(req, param_name):
 
     for good_param in good_params:
         cur_request = change_param(req[2], param_name, good_param)
-        reply = recv_from_host(cur_request, req[1], 80)
+        reply = http_request(cur_request, req[1], 80)
         if reply:
             reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
         if not normal_reply:
@@ -50,7 +50,7 @@ def check_request(req, param_name):
         param = param.strip()
 
         cur_request = change_param(req[2], param_name, param)
-        reply = recv_from_host(cur_request, req[1], 80)
+        reply = http_request(cur_request, req[1], 80)
         reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
         if reply != normal_reply:
             bad_params += param + "<br>"

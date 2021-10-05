@@ -3,8 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <title>Proxy web interface</title>
+    <link href="/styles/styles.css" rel="stylesheet">
 </head>
 <body>
+    {{ table|safe }}
     <form action="" method="get">
         <p>Введите имя параметра</p>
         <label for="host">

@@ -2,111 +2,128 @@ from _thread import start_new_thread
 from database import *
 import socket
 
+from utils import open_socket, read_config
+
 try:
     from http_parser.parser import HttpParser
 except ImportError:
     from http_parser.pyparser import HttpParser
 
-HOST = ''
-PORT = 8080
+
 BUF_SIZE = 4096
 
 
-def receive_data_from_socket(sock):
-    parser = HttpParser()
-    resp = b''
+def receive_data(sock: socket, parser: HttpParser) -> bytes:
+    data = b""
     while not parser.is_message_complete():
-        data = sock.recv(BUF_SIZE)
-        if not data:
+        chunk = sock.recv(BUF_SIZE)
+        if not chunk:
             break
 
-        parser.execute(data, len(data))
-
-        resp += data
-    return resp, parser
-
-
-def cleanup_http_request(parser, data):
-    data_array = data.decode("utf-8").split("\r\n")
-    print(data_array)
-    url = ""
-    if parser.is_headers_complete():
-        url = parser.get_url()
-
-    if len(data_array) < 2:
-        return None, None
-    data_array[0] = data_array[0].replace(url, parser.get_path())
-
-    host = parser.get_headers()['host'].strip()
-
-    request_to_host = ""
-    for line in data_array:
-        if line.find("Proxy-Connection") != -1:
-            request_to_host += "Connection: close\r\n"
-        # elif line.find("Accept-Encoding: gzip, deflate") != -1:
-        #     request_to_host += "Accept-Encoding: deflate\r\n"
-        else:
-            request_to_host += line + "\n"
-
-    return request_to_host, host
+        parser.execute(chunk, len(chunk))
+        data += chunk
+    return data
 
 
-def http_request(request, host, port):
-    sock_req = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+def proxy_http(cl_request, cl_parser, cl_sock, DB):
+    # prepare request to server
+    headers = cl_parser.get_headers()
+    cleanup_headers(headers)
+    wsgi = cl_parser.get_wsgi_environ()
+    sv_request = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
+    sv_request += headers_to_string(headers) + "\n"
+    # print(parser.get_path())
+    # print(parser.get_fragment())
+    # print(parser.get_headers())
+    # print(parser.get_url())
+    # print(parser.get_method())
+    # print(parser.get_query_string())
+    # print(parser.get_status_code())
+    # print(parser.get_version())
+    # print(parser.get_wsgi_environ())
+    # print("++++++")
+    # print(cl_request.decode())
+    print("\nSEND REQUEST:", sv_request)
+    # get answer from server
+    reply, sv_parser = http_request(sv_request, headers["host"], 80)
+    # re-send answer to client
+    cl_sock.sendall(reply)
+    cl_sock.close()
+
+    DB.insert_request(sv_request, headers["host"])
+
+
+def headers_to_string(headers: dict):
+    sv_request = ""
+    for header, value in headers.items():
+        sv_request += header + ": " + value + "\n"
+    return sv_request
+
+
+def cleanup_headers(headers: dict):
+    for header, value in headers.items():
+        if header == "PROXY-CONNECTION":
+            headers.pop(header)
+            headers["CONNECTION"] = value
+        elif header == "ACCEPT-ENCODING":
+            headers[header] = value.replace('gzip', 'no_gzip_please')
+
+
+def http_request(request: str, host: str, port: int):
+    sv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
-        sock_req.connect((host, port))
+        sv_sock.connect((host, port))
     except:
-        sock_req.close()
-        return None
-    sock_req.sendall(request.encode("utf-8"))
-    return sock_req
+        sv_sock.close()
+        raise ValueError("Can't connect to host:" + host + "port:" + str(port))
+    sv_sock.sendall(request.encode())
+
+    parser = HttpParser()
+    reply = receive_data(sv_sock, parser)
+    sv_sock.close()
+
+    print("\nGET ANSWER:")
+    print(parser.get_path())
+    print(parser.get_fragment())
+    print(parser.get_headers())
+    print(parser.get_url())
+    print(parser.get_method())
+    print(parser.get_query_string())
+    print(parser.get_status_code())
+    print(parser.get_version())
+    print(parser.get_wsgi_environ())
+    print(parser.is_message_complete())
+    print(parser.is_headers_complete())
+    print(parser.is_chunked())
+    print("++++++")
+    return reply, parser
 
 
-def proxy_http(data, parser, sock, DB):
-    request, host = cleanup_http_request(parser, data)
-    reply = recv_from_host(request, host, 80)
-    sock.sendall(reply)
-    sock.close()
-    DB.insert_request(request, host, 0)
-    return reply
+# cl_... is client variables
+# sv_... is remote web-server variables
+if __name__ == "__main__":
+    config = read_config("config.json")
+    DB = Database(config)
 
-
-def recv_from_host(request, host, port):
-    sock_req = http_request(request, host, port)
-    if not sock_req:
-        return None
-    reply, _ = receive_data_from_socket(sock_req)
-    sock_req.close()
-    return reply
-
-
-DB = Database()
-
-if __name__ == '__main__':
     while True:
-        # Create a TCP socket
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        # Re-use the socket
-        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        # bind the socket to a public host, and a port
-        sock.bind((HOST, PORT))
-        sock.listen()
+        cl_sock = open_socket(config["proxy_host"], int(config["proxy_port"]))
 
         try:
-            sock, address = sock.accept()
-            data, parser = receive_data_from_socket(sock)
+            parser = HttpParser()
+
+            cl_sock, cl_address = cl_sock.accept()
+            data = receive_data(cl_sock, parser)
 
             if parser.get_method() == "CONNECT":
-                print("HTTPS request detected")
-                sock.close()
+                # print("HTTPS request detected")
+                cl_sock.close()
             else:
-                print("Method:", parser.get_method())
                 print("HTTP request detected")
-                start_new_thread(proxy_http, (data, parser, sock, DB))
+                start_new_thread(proxy_http, (data, parser, cl_sock, DB))
 
         except KeyboardInterrupt:
-            sock.close()
+            cl_sock.close()
             exit()
-        except Exception as e:
-            sock.close()
-            print(e.args)
+        # except Exception as e:
+        #     cl_sock.close()
+        #     print(e.args)

@@ -16,5 +16,6 @@ python3 web_interface.py
 /request - отправка кастомного запроса
 /requests/id – вывод одного запроса
 /repeat/id – повтор одного запроса
-/param-miner/id – проверка запроса Param-miner'ом
+/param-check/id – проверка уязвимости значений определённого параметра
+/param-miner/id - проверка на нахождение уязвимого параметра (Param-miner)
 ```

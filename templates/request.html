@@ -3,19 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <title>Proxy web interface</title>
+    <link href="/styles/styles.css" rel="stylesheet">
 </head>
 <body>
-    <form action="" method="post">
-        <p>Отправить запрос</p>
-        <label for="host">
-            Host: <input type="text" name="host" placeholder="Не обязательно">
-        </label>
-        <br>
-        <label for="request">
-            Request: <textarea name="request"></textarea>
-        </label>
-        <p><input type="submit" value="Отправить"></p>
-    </form>
+    <button class="fullwidth" onclick="document.location='/request'">Отправить свой запрос</button>
+    <div class="table-container">
+        {{ table|safe }}
+    </div>
     <button onclick="document.location='/'">На главную</button>
+    <button onclick="document.location='/repeat/{{ id }}'">Повторить</button>
+    <button onclick="document.location='/request?host={{ host }}&request={{ request }}'">Изменить</button>
+    <button onclick="document.location='/param-miner/{{ id }}'">Проверить param-miner'ом</button>
 </body>
 </html>

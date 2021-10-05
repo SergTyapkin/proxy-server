@@ -6,9 +6,8 @@
     <link href="/styles/styles.css" rel="stylesheet">
 </head>
 <body>
-    <button class="fullwidth" onclick="document.location='/request'">Отправить свой запрос</button>
-    <div class="table-container">
-        {{ table|safe }}
-    </div>
+    <button onclick="document.location='/'">To home</button>
+    <button onclick="history.go(-1)">To request</button><br>
+    <div class="m-10">{{ response }}</div>
 </body>
 </html>
