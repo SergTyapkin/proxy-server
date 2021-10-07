@@ -52,7 +52,7 @@ class Database:
 
     def select_all_requests(self):
         cur = self.db.cursor()
-        cur.execute("SELECT * FROM requests")
+        cur.execute("SELECT * FROM requests ORDER BY id DESC LIMIT 300")
         return cur.fetchall()
 
     def select_request_by_id(self, id):

@@ -38,7 +38,7 @@ def send_request():
 
     reply = ""
     try:
-        reply, parser = http_request(req, host, 80)
+        reply, parser = http_request(req, host)
     except:
         pass
 
@@ -98,7 +98,7 @@ def get_html_requests(requests):
             <td>%s</td>
         </tr>
         """ % (req[0], req[0], req[1], req[2].replace('\n', '<br>'), req[3])
-        tbody = row + tbody
+        tbody += row
 
     table += tbody + "</tbody></table>"
     return table
@@ -108,7 +108,7 @@ def get_html_requests(requests):
 def repeat_request(id):
     req = list(DB.select_request_by_id(id))
 
-    reply, parser = http_request(req[2], req[1], 80)
+    reply, parser = http_request(req[2], req[1], req[3])
     if not reply:
         reply = "No response".encode()
     else:

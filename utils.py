@@ -1,5 +1,7 @@
 import socket
 import json
+import ssl
+
 
 def str_between(string: (str, bytes), start: (str, bytes), end: (str, bytes), replace_to: (str, bytes) = None):
     end_idx = start_idx = string.find(start) + len(start)
@@ -15,7 +17,7 @@ def str_between(string: (str, bytes), start: (str, bytes), end: (str, bytes), re
         return string[start_idx: end_idx], start_idx, end_idx
 
 
-def open_socket(host: str, port: int) -> socket:
+def open_listen_socket(host: str, port: int) -> socket:
     # Create a TCP socket
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Re-use the socket

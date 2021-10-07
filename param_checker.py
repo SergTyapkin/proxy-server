@@ -1,11 +1,29 @@
 from main import http_request
 from utils import str_between
 
-good_params = [
+good_values = [
     "asfdgbgfvasdcxvbb",
+    "fgmfyhtyhf",
+    "waefqgse",
 ]
 
-def change_param(request, param_name, param_value):
+
+def change_param_value(request, param_name, param_value):
+    url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
+    url = url.strip()
+    param_idx = url.find(param_name)
+    if param_idx == -1:  # param not in url
+        if url.find("?") == -1:  # no query-params
+            url += "?"
+        else:
+            url += "&"
+        url += param_name + "=" + param_value
+    else:  # param in url
+        url = str_between(url, param_name, ['\n', '&', '?'], param_value)[0]
+    return request[:url_start_idx] + " " + url + " " + request[url_end_idx:]
+
+
+def change_param_name(request, param_name, param_value):
     url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
     url = url.strip()
     param_idx = url.find(param_name)
@@ -27,9 +45,9 @@ def check_request(req, param_name):
     normal_request = None
     bad_params = ""
 
-    for good_param in good_params:
+    for good_param in good_values:
         cur_request = change_param(req[2], param_name, good_param)
-        reply = http_request(cur_request, req[1], 80)
+        reply = http_request(cur_request, req[1])
         if reply:
             reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
         if not normal_reply:
@@ -50,7 +68,7 @@ def check_request(req, param_name):
         param = param.strip()
 
         cur_request = change_param(req[2], param_name, param)
-        reply = http_request(cur_request, req[1], 80)
+        reply = http_request(cur_request, req[1])
         reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
         if reply != normal_reply:
             bad_params += param + "<br>"
