@@ -1,12 +1,10 @@
 import os.path
 import subprocess
 import time
-import gzip
-import socket
-import ssl
 from _thread import start_new_thread
 
 from utils import *
+from web_utils import *
 from colorize import *
 from database import *
 
@@ -20,31 +18,11 @@ CERT_KEY = "cert.key"
 CA_CERT = "ca.cert"
 CA_KEY = "ca.key"
 
-BUF_SIZE = 4096
-RECV_TIMEOUT = 2
 CONNECTION_ESTABILISHED = b'HTTP/1.1 200 Connection Established\r\n\r\n'
 
 
 # cl_... is client variables
 # sv_... is remote web-server variables
-
-
-def receive_data(sock: socket, parser: HttpParser) -> bytes:
-    data = b""
-    sock.settimeout(RECV_TIMEOUT)
-    while not parser.is_message_complete():  # and data[-len(b'\r\n\r\n'):] != b'\r\n\r\n':
-        chunk = None
-        try:
-            chunk = sock.recv(BUF_SIZE)
-        except:
-            if parser.is_headers_complete():
-                break
-        if not chunk:
-            break
-
-        parser.execute(chunk, len(chunk))
-        data += chunk
-    return data
 
 
 def proxy_http(cl_parser, cl_sock, DB):
@@ -76,14 +54,6 @@ def proxy_http(cl_parser, cl_sock, DB):
     DB.insert_request(sv_request, host)
 
 
-def headers_to_string(headers: dict, ignore_headers: list = []):
-    sv_request = ""
-    for header, value in headers.items():
-        if header.lower() not in ignore_headers:
-            sv_request += header + ": " + value + "\n"
-    return sv_request
-
-
 def cleanup_headers(headers: dict):
     for header, value in headers.items():
         if header == "PROXY-CONNECTION":
@@ -91,49 +61,6 @@ def cleanup_headers(headers: dict):
             headers["CONNECTION"] = value
         elif header == "ACCEPT-ENCODING":
             headers[header] = value.replace('gzip', 'no_gzip_please')
-
-
-def http_request(request: (str, bytes), host: str, secure: bool = False, decode_from_gzip: bool = False) -> (bytes, HttpParser):
-    port = 443 if secure else 80
-
-    sv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    sv_sock.connect((host, port))
-
-    if secure:
-        sv_sock = ssl.create_default_context().wrap_socket(sv_sock, server_hostname=host)
-
-    if isinstance(request, bytes):
-        sv_sock.sendall(request + b'\r\n\r\n')
-    else:
-        sv_sock.sendall((request + '\n\n').replace(' \n', '\r\n').encode())
-
-    sv_parser = HttpParser()
-    sv_reply = receive_data(sv_sock, sv_parser)
-    print(sv_reply)
-    sv_sock.close()
-
-    if not decode_from_gzip:
-        return sv_reply, sv_parser
-
-    # decode from gzip
-    headers = sv_parser.get_headers()
-    headers_and_body = sv_reply.split(b'\r\n\r\n')
-    if len(headers_and_body) > 1 and headers.get('content-encoding') == "gzip":
-        recv_body = headers_and_body[1]
-        sv_reply = sv_reply[:sv_reply.find(b'\r\n')].strip() + b'\n'  # HTTP/1.1 200
-        sv_reply += headers_to_string(headers, ['content-encoding', 'transfer-encoding']).replace('\n', '\r\n').encode() + b'\n\n'
-        print(CYAN)
-        if sv_parser.is_chunked():
-            splitted_body = recv_body.split(b'\r\n')
-            recv_body = b''
-            for i in range(1, len(splitted_body), 2):
-                recv_body += splitted_body[i]
-            print(YELLOW)
-        recv_body = gzip.decompress(recv_body)
-        print(recv_body)
-        print(DEFAULT)
-        sv_reply += recv_body + b'\n\n'
-    return sv_reply, sv_parser
 
 
 # --------------------------- HTTPS ------------------------------

@@ -3,9 +3,9 @@ from urllib.parse import quote_plus
 from flask import Flask, render_template, request
 from database import *
 
-from main import http_request
 from param_checker import *
-from utils import read_config
+from utils import *
+from web_utils import *
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 config = read_config("config.json")
