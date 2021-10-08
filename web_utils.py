@@ -76,12 +76,12 @@ def http_request(request: (str, bytes), host: str, secure: bool = False, gzip_de
     if len(headers_and_body) > 1 and headers.get('content-encoding') == "gzip":
         recv_body = headers_and_body[1]
         sv_reply = sv_reply[:sv_reply.find(b'\r\n')].strip() + b'\n'  # HTTP/1.1 200
-        sv_reply += headers_to_string(headers, ['content-encoding', 'transfer-encoding']).replace('\n', '\r\n').encode() + b'\n\n'
+        sv_reply += headers_to_string(headers, ['content-encoding', 'transfer-encoding']).replace('\n', '\r\n').encode() + b'\r\n'
         if sv_parser.is_chunked():
             splitted_body = recv_body.split(b'\r\n')
             recv_body = b''
             for i in range(1, len(splitted_body), 2):
                 recv_body += splitted_body[i]
         recv_body = gzip.decompress(recv_body)
-        sv_reply += recv_body + b'\n\n'
+        sv_reply += recv_body
     return sv_reply, sv_parser

@@ -25,3 +25,27 @@ def read_config(filepath: str) -> dict:
     except:
         print("Can't open and serialize config.json")
         exit()
+
+
+def html_prettify(headers: list, body: list, multilines: bool = False, row_onclick=None) -> str:
+    if multilines:
+        value_foo = lambda val: str(val).replace('\n', '<br>')
+    else:
+        value_foo = lambda val: str(val)
+
+    thead = "<thead>\n"
+    tbody = "<tbody>\n"
+    for header in headers:
+        thead += "<tr>\n"
+        tbody += "<th>" + header + "</th>"
+    thead += "</tr>\n"
+
+    for row in body:
+        tbody += "<tr" + ((" onclick=" + row_onclick(row[0]) + " style=\"cursor: pointer\"") if row_onclick else "") + ">\n"
+        for value in row:
+            tbody += "<td>" + value_foo(value) + "</td>"
+        tbody += "</tr>\n"
+    thead += "</thead>\n"
+    tbody += "</tbody>\n"
+
+    return "<table>\n" + thead + tbody + "</table>"

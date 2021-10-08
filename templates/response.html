@@ -11,27 +11,41 @@
     <button onclick="document.location='/'">To home</button>
     <button onclick="history.go(-1)">To request</button><br>
     <p id="container" class="switch-container">
-        <span class="hidden">RAW</span>
-        <span id="switch" class="m-10 switch-btn switch-on"></span>
-        <span>RENDER</span>
+        <span class="">RAW</span>
+        <span id="switch" class="m-10 switch-btn"></span>
+        <span class="hidden">RENDER</span>
     </p>
-    <div class="m-10">{{ response }}</div>
+    <div class="m-10">
+        <div id="headers" class="headers">
+            {% for header in headers %}
+                {{ header }}<br>
+            {% endfor %}
+        </div>
+        <div id="response" class="response">
+            {% for string in response %}
+                {{ string }}<br>
+            {% endfor %}
+        </div>
+    </div>
 </body>
 
 <script>
     const container = document.getElementById('container');
     const switchButton = document.getElementById('switch');
+    const response = document.getElementById('response');
+    const headers = document.getElementById('headers');
+    const responseText = response.innerText;
     switchButton.addEventListener('click', () => {
         if (switchButton.classList.contains("switch-on")) {
             switchButton.classList.remove("switch-on");
             container.firstElementChild.classList.remove("hidden");
             container.lastElementChild.classList.add("hidden");
-            response.innerText = response.innerHTML;
+            response.innerText = responseText;
         } else {
             switchButton.classList.add("switch-on");
             container.firstElementChild.classList.add("hidden");
             container.lastElementChild.classList.remove("hidden");
-            response.innerHTML = response.innerText;
+            response.innerHTML = responseText;
         }
     });
 </script>

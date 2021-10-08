@@ -1,6 +1,6 @@
 import random
 
-from main import http_request
+from main_proxy import http_request
 from utils import str_between
 
 good_values = [

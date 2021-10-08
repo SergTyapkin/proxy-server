@@ -163,6 +163,67 @@ button.attention {
     left: 37px;
 }
 
+
+
+.group {
+	display: flex;
+	align-items: center;
+	margin-bottom: 2em;
+}
+
+input[type="checkbox"] {
+	position: absolute;
+	opacity: 0;
+	z-index: -1;
+}
+
+label.checkbox {
+    font-size: 20px;
+	position: relative;
+	margin-right: 1em;
+	padding-left: 2em;
+	padding-right: 1em;
+	line-height: 2;
+	cursor: pointer;
+}
+
+label.checkbox:before {
+	box-sizing: border-box;
+	content: " ";
+	position: absolute;
+	top: 0;
+	left: 0;
+	display: block;
+	width: 1.4em;
+	height: 1.4em;
+	border: 2px solid white;
+	border-radius: .25em;
+	z-index: -1;
+}
+
+/* Checked */
+input[type="checkbox"]:checked + label.checkbox {
+    font-style: italic;
+	padding-left: 1em;
+	color: #8e44ad;
+}
+
+input[type="checkbox"]:checked + label.checkbox:before {
+	top: 0;
+	width: 100%;
+	height: 1.5em;
+	background: white;
+}
+
+/* Transition */
+label.checkbox,
+label.checkbox::before {
+	-webkit-transition: .25s all ease;
+	-o-transition: .25s all ease;
+	transition: .25s all ease;
+}
+
+
 @media(hover: hover) and (pointer: fine) {
     button {
         letter-spacing: 2px;
