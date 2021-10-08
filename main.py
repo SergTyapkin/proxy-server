@@ -1,10 +1,10 @@
 import os.path
 import subprocess
 import time
-from _thread import start_new_thread
-
+import gzip
 import socket
 import ssl
+from _thread import start_new_thread
 
 from utils import *
 from colorize import *
@@ -19,8 +19,9 @@ CERT_DIR = "./certs/"
 CERT_KEY = "cert.key"
 CA_CERT = "ca.cert"
 CA_KEY = "ca.key"
-CERT_COMMANDS_DIR = "/certs"
+
 BUF_SIZE = 4096
+RECV_TIMEOUT = 2
 CONNECTION_ESTABILISHED = b'HTTP/1.1 200 Connection Established\r\n\r\n'
 
 
@@ -30,16 +31,19 @@ CONNECTION_ESTABILISHED = b'HTTP/1.1 200 Connection Established\r\n\r\n'
 
 def receive_data(sock: socket, parser: HttpParser) -> bytes:
     data = b""
+    sock.settimeout(RECV_TIMEOUT)
     while not parser.is_message_complete():  # and data[-len(b'\r\n\r\n'):] != b'\r\n\r\n':
-        cyan()
-        chunk = sock.recv(BUF_SIZE)
+        chunk = None
+        try:
+            chunk = sock.recv(BUF_SIZE)
+        except:
+            if parser.is_headers_complete():
+                break
         if not chunk:
             break
 
         parser.execute(chunk, len(chunk))
         data += chunk
-        parser.is_message_complete()
-        parser.is_headers_complete()
     return data
 
 
@@ -50,15 +54,13 @@ def proxy_http(cl_parser, cl_sock, DB):
         return
     host = headers["host"]
 
-    yellow()
-    print("HTTP:", host, headers)
-    default()
+    print(YELLOW + "HTTP:", host, headers, DEFAULT)
 
     # prepare request to server
     cleanup_headers(headers)
     wsgi = cl_parser.get_wsgi_environ()
     sv_request = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    sv_request += headers_to_string(headers) + "\n"
+    sv_request += headers_to_string(headers)
 
     # get answer from server
     reply, sv_parser = http_request(sv_request, host)
@@ -67,19 +69,18 @@ def proxy_http(cl_parser, cl_sock, DB):
     cl_sock.sendall(reply)
     cl_sock.close()
 
-    cyan()
-    underline()
-    print("CLOSED:", host)
-    default()
+    print(CYAN + UNDERLINE + "CLOSED:", host, DEFAULT)
 
     # insert request into database
+    sv_request.replace('\r', '')
     DB.insert_request(sv_request, host)
 
 
-def headers_to_string(headers: dict):
+def headers_to_string(headers: dict, ignore_headers: list = []):
     sv_request = ""
     for header, value in headers.items():
-        sv_request += header + ": " + value + "\n"
+        if header.lower() not in ignore_headers:
+            sv_request += header + ": " + value + "\n"
     return sv_request
 
 
@@ -92,7 +93,7 @@ def cleanup_headers(headers: dict):
             headers[header] = value.replace('gzip', 'no_gzip_please')
 
 
-def http_request(request: (str, bytes), host: str, secure: bool = False):
+def http_request(request: (str, bytes), host: str, secure: bool = False, decode_from_gzip: bool = False) -> (bytes, HttpParser):
     port = 443 if secure else 80
 
     sv_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -102,14 +103,36 @@ def http_request(request: (str, bytes), host: str, secure: bool = False):
         sv_sock = ssl.create_default_context().wrap_socket(sv_sock, server_hostname=host)
 
     if isinstance(request, bytes):
-        sv_sock.sendall(request)
+        sv_sock.sendall(request + b'\r\n\r\n')
     else:
-        sv_sock.sendall(request.encode())
+        sv_sock.sendall((request + '\n\n').replace(' \n', '\r\n').encode())
 
     sv_parser = HttpParser()
     sv_reply = receive_data(sv_sock, sv_parser)
+    print(sv_reply)
     sv_sock.close()
 
+    if not decode_from_gzip:
+        return sv_reply, sv_parser
+
+    # decode from gzip
+    headers = sv_parser.get_headers()
+    headers_and_body = sv_reply.split(b'\r\n\r\n')
+    if len(headers_and_body) > 1 and headers.get('content-encoding') == "gzip":
+        recv_body = headers_and_body[1]
+        sv_reply = sv_reply[:sv_reply.find(b'\r\n')].strip() + b'\n'  # HTTP/1.1 200
+        sv_reply += headers_to_string(headers, ['content-encoding', 'transfer-encoding']).replace('\n', '\r\n').encode() + b'\n\n'
+        print(CYAN)
+        if sv_parser.is_chunked():
+            splitted_body = recv_body.split(b'\r\n')
+            recv_body = b''
+            for i in range(1, len(splitted_body), 2):
+                recv_body += splitted_body[i]
+            print(YELLOW)
+        recv_body = gzip.decompress(recv_body)
+        print(recv_body)
+        print(DEFAULT)
+        sv_reply += recv_body + b'\n\n'
     return sv_reply, sv_parser
 
 
@@ -119,9 +142,7 @@ def proxy_https(cl_parser, cl_sock, DB):
     host = cl_parser.get_headers()['host']
     host = host[:host.find(':')].rstrip('/')
 
-    green()
-    print("HTTPS:", host, cl_parser.get_headers())
-    default()
+    print(GREEN + "HTTPS:", host, cl_parser.get_headers(), DEFAULT)
 
     # generate cert
     cert_full_path = generate_cert(host)
@@ -132,37 +153,26 @@ def proxy_https(cl_parser, cl_sock, DB):
     cl_sock_secure.do_handshake()
 
     # get http request from https connection
-    sv_parser = HttpParser()
-    sv_request = receive_data(cl_sock_secure, sv_parser)
-
-    # print("\nGET ANSWER:")
-    # print(sv_parser.get_path())
-    # print(sv_parser.get_fragment())
-    # print(sv_parser.get_headers())
-    # print(sv_parser.get_url())
-    # print(sv_parser.get_method())
-    # print(sv_parser.get_query_string())
-    # print(sv_parser.get_status_code())
-    # print(sv_parser.get_version())
-    # print(sv_parser.get_wsgi_environ())
-    # print(sv_parser.is_message_complete())
-    # print(sv_parser.is_headers_complete())
-    # print(sv_parser.is_chunked())
-    # print("++++++")
+    cl_http_parser = HttpParser()
+    cl_http_request = receive_data(cl_sock_secure, cl_http_parser)
 
     # get reply from server
-    sv_reply, sv_parser = http_request(sv_request, host, True)
+    sv_reply, sv_parser = http_request(cl_http_request, host, True)
 
     # re-send answer to client
     cl_sock_secure.sendall(sv_reply)
     cl_sock_secure.close()
 
-    cyan()
-    underline()
-    print("CLOSED:", host)
-    default()
+    print(CYAN + UNDERLINE + "CLOSED:", host, DEFAULT)
 
-    DB.insert_request(headers_to_string(cl_parser.get_headers()), host, True)
+    # prepare request to save in database
+    headers = cl_http_parser.get_headers()
+    cleanup_headers(headers)
+    wsgi = cl_http_parser.get_wsgi_environ()
+    request_to_save = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
+    request_to_save += headers_to_string(headers | cl_http_parser.get_headers())
+    request_to_save.replace('\r', '')
+    DB.insert_request(request_to_save, host, True)
 
 
 def generate_cert(host: str) -> str:
@@ -204,7 +214,4 @@ if __name__ == "__main__":
         except Exception as e:
             cl_sock.close()
             print(e.args)
-            red()
-            underline()
-            print("CLOSED")
-            default()
+            print(RED + UNDERLINE + "CLOSED" + DEFAULT)

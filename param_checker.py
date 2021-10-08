@@ -1,3 +1,5 @@
+import random
+
 from main import http_request
 from utils import str_between
 
@@ -19,11 +21,11 @@ def change_param_value(request, param_name, param_value):
             url += "&"
         url += param_name + "=" + param_value
     else:  # param in url
-        url = str_between(url, param_name, ['\n', '&', '?'], param_value)[0]
+        url, _, _ = str_between(url, param_name, ['\n', '&', '?'], param_value)
     return request[:url_start_idx] + " " + url + " " + request[url_end_idx:]
 
 
-def change_param_name(request, param_name, param_value):
+def change_param_name(request, param_name, new_param_name):
     url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
     url = url.strip()
     param_idx = url.find(param_name)
@@ -32,44 +34,39 @@ def change_param_name(request, param_name, param_value):
             url += "?"
         else:
             url += "&"
-        url += param_name + "=" + param_value
+        url += new_param_name + "=" + random.choice(good_values)
     else:  # param in url
-        url = str_between(url, param_name, ['\n', '&', '?'], param_value)[0]
+        url = url.replace(param_name, new_param_name)
     return request[:url_start_idx] + " " + url + " " + request[url_end_idx:]
 
 
-def check_request(req, param_name):
-    req = list(req)
-
+def check_request(host: str, request: str, secure: bool, param_name: str, check_function) -> str:
     normal_reply = None
     normal_request = None
     bad_params = ""
 
     for good_param in good_values:
-        cur_request = change_param(req[2], param_name, good_param)
-        reply = http_request(cur_request, req[1])
-        if reply:
-            reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
+        cur_request = check_function(request, param_name, good_param)
+        reply = http_request(cur_request, host, secure)
         if not normal_reply:
             normal_reply = reply
             normal_request = cur_request
         elif reply != normal_reply:
-            return "<h1>Can't start testing</h1><br>" \
-                   "Requests must be good but request:<br>" + normal_request +\
-                   "Response:<br>" + str(normal_reply) + \
-                   "<br><br>Is not the same as:<br>" + cur_request + \
-                   "Response:<br>" + str(reply)
+            return "<h1>Не получается начать проверку</h1><br>" \
+                   "Ответы должны быть одинаковы, но на запрос:<br>" + normal_request +\
+                   "Ответ:<br>" + str(normal_reply) + \
+                   "<br><br>А на запрос:<br>" + cur_request + \
+                   "Ответ:<br>" + str(reply)
 
     file = open("param_samples.txt", "r")
     while True:
         param = file.readline()
         if not param:
             break
-        param = param.strip()
+        param = param.rstrip('\n')
 
-        cur_request = change_param(req[2], param_name, param)
-        reply = http_request(cur_request, req[1])
-        reply = reply[reply.find(b'\r\n\r\n') + len(b'\r\n\r\n'):]
+        cur_request = check_function(request, param_name, param)
+        reply = http_request(cur_request, host, secure)
         if reply != normal_reply:
             bad_params += param + "<br>"
             print(param, "BAD")
@@ -78,7 +75,7 @@ def check_request(req, param_name):
     file.close()
 
     if not bad_params:
-        return "<h1>Request not seems to be vulnerable<h1>"
-    return "<h1>Found some vulnerabilities with params:</h1><br>" + bad_params
+        return "<h1>Запрос не выглядит уязвимым<h1>"
+    return "<h1>Найдены уязвимости с параметрами:</h1><br>" + bad_params
 
 

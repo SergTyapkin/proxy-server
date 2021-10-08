@@ -1,13 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns="http://www.w3.org/1999/html">
 <head>
     <meta charset="UTF-8">
     <title>Proxy web interface</title>
-    <link href="/styles/styles.css" rel="stylesheet">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <link href="/static/styles.css" rel="stylesheet">
 </head>
+
 <body>
     <button onclick="document.location='/'">To home</button>
     <button onclick="history.go(-1)">To request</button><br>
+    <p id="container" class="switch-container">
+        <span class="hidden">RAW</span>
+        <span id="switch" class="m-10 switch-btn switch-on"></span>
+        <span>RENDER</span>
+    </p>
     <div class="m-10">{{ response }}</div>
 </body>
+
+<script>
+    const container = document.getElementById('container');
+    const switchButton = document.getElementById('switch');
+    switchButton.addEventListener('click', () => {
+        if (switchButton.classList.contains("switch-on")) {
+            switchButton.classList.remove("switch-on");
+            container.firstElementChild.classList.remove("hidden");
+            container.lastElementChild.classList.add("hidden");
+            response.innerText = response.innerHTML;
+        } else {
+            switchButton.classList.add("switch-on");
+            container.firstElementChild.classList.add("hidden");
+            container.lastElementChild.classList.remove("hidden");
+            response.innerHTML = response.innerText;
+        }
+    });
+</script>
+
 </html>

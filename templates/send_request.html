@@ -1,22 +1,24 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Proxy web interface</title>
-    <link href="/styles/styles.css" rel="stylesheet">
-</head>
+{% extends "template.html" %}
+{% block content %}
+
 <body>
     <form action="" method="post">
         <h1>Отправить запрос</h1>
-        <label for="host">
-            Host: <input type="text" name="host" placeholder="Не обязательно" value="{{ host }}">
-        </label>
+        <label for="host">Host:</label>
+        <input id="host" type="text" name="host" placeholder="Не обязательно" value="{{ host }}">
+
         <br>
-        <label for="request">
-            Request: <textarea name="request" cols="80" rows="30">{{ request }}</textarea>
-        </label>
+        <label for="request">Request:</label>
+        <textarea id="request" name="request" cols="80" rows="30">{{ request }}</textarea>
+
+        <p></p>
+        <br>
+        <input id="https" type="checkbox" name="https">
+        <label for="https">Use HTTPS</label>
+
         <p><input type="submit" value="Отправить"></p>
     </form>
     <button onclick="document.location='/'">На главную</button>
 </body>
-</html>
+
+{% endblock %}

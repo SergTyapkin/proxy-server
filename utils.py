@@ -22,7 +22,7 @@ def open_listen_socket(host: str, port: int) -> socket:
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     # Re-use the socket
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    # bind the socket to a public host, and a port
+    # bind the socket to a static host, and a port
     sock.bind((host, port))
     sock.listen()
     return sock

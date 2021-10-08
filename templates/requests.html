@@ -1,14 +1,11 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Proxy web interface</title>
-    <link href="/styles/styles.css" rel="stylesheet">
-</head>
+{% extends "template.html" %}
+{% block content %}
+
 <body>
     <button class="fullwidth" onclick="document.location='/request'">Отправить свой запрос</button>
     <div class="table-container">
         {{ table|safe }}
     </div>
 </body>
-</html>
+
+{% endblock %}

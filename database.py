@@ -3,6 +3,8 @@ from psycopg2.extensions import ISOLATION_LEVEL_AUTOCOMMIT
 
 
 class Database:
+    initialized = False
+
     def __init__(self, config):
         try:
             self.db = psycopg2.connect(
@@ -14,7 +16,7 @@ class Database:
             self.db.set_isolation_level(ISOLATION_LEVEL_AUTOCOMMIT)
         except psycopg2.Error as error:
             print("Ошибка подключении к базе дданных", error)
-            exit()
+            return
 
         try:
             self.cursor = self.db.cursor()
@@ -25,7 +27,7 @@ class Database:
                 print("База данных уже существует")
             else:
                 print("Ошибка при создании базы данных", error)
-                exit()
+                return
         finally:
             self.cursor.close()
 
@@ -41,18 +43,23 @@ class Database:
             print("Таблица requests создана")
         except psycopg2.Error as error:
             print("Ошибка при создании таблицы", error)
-            exit()
+            return
         finally:
             self.cursor.close()
 
+        self.initialized = True
+
     def insert_request(self, req: str, host: str, tls: bool = False):
+        if not self.initialized:
+            print("База данных не была инициализирована. Операция отменена")
+            return
         cur = self.db.cursor()
         cur.execute("INSERT INTO requests(host, request, tls) VALUES(%s, %s, %s)", [host, req, tls])
         cur.close()
 
     def select_all_requests(self):
         cur = self.db.cursor()
-        cur.execute("SELECT * FROM requests ORDER BY id DESC LIMIT 300")
+        cur.execute("SELECT * FROM requests ORDER BY id DESC LIMIT 500")
         return cur.fetchall()
 
     def select_request_by_id(self, id):

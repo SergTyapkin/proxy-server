@@ -1,15 +1,13 @@
-import urllib
-from string import Template
+from urllib.parse import quote_plus
 
 from flask import Flask, render_template, request
 from database import *
 
 from main import http_request
-from param_checker import check_request
+from param_checker import *
 from utils import read_config
 
-
-app = Flask(__name__, static_folder="")
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 config = read_config("config.json")
 DB = Database(config)
 
@@ -24,31 +22,32 @@ def get_requests():
 @app.route('/request', methods=['GET', 'POST'])
 def send_request():
     if request.method == 'GET':
-        return render_template("send_request.html", host=request.args.get('host'), request=request.args.get('request'))
+        host = request.args.get('host')
+        req = request.args.get('request')
+        return render_template("send_request.html", host="" if host is None else host, request="" if req is None else req)
 
-    host = request.form.get('host')
-    req = request.form.get('request')
-    req += '\n\n'
+    host = request.form.get('host').strip().replace('\r', '')
+    req = request.form.get('request').strip().replace('\r', '')
+    secure = True if request.form.get('https') is not None else False
     if not host:  # autocomplete Host
-        host_end_idx = host_start_idx = req.find("Host:") + len("Host:")
-
-        while req[host_end_idx] not in ['\n', '/'] and host_end_idx < len(req):
+        host_end_idx = host_start_idx = req.lower().find("host:") + len("host:")
+        while host_end_idx < len(req) and req[host_end_idx] not in ['\n', '/']:
             host_end_idx += 1
         host = (req[host_start_idx: host_end_idx]).strip()
 
     reply = ""
     try:
-        reply, parser = http_request(req, host)
+        reply, parser = http_request(req, host, secure, True)
     except:
         pass
 
     if not reply:
-        reply = "No response".encode()
+        reply = "<h1>No response</h1>".encode()
     else:
         DB.insert_request(req, host)
         headers_end_idx = reply.find(b'\r\n\r\n')
-        reply = b'<div class=headers>' + reply[:headers_end_idx].replace(b'\r\n', b'<br>') + b'</div>' + \
-                b'<div class=response>' + reply[headers_end_idx:] + b'</div>'
+        reply = b'<div id="headers" class="headers">' + reply[:headers_end_idx].replace(b'\r\n', b'<br>') + b'</div>' + \
+                b'<div id="response" class="response">' + reply[headers_end_idx:] + b'</div>'
 
     file = open("./templates/response.html", "r")
     html = file.read()
@@ -61,19 +60,22 @@ def send_request():
 def get_request_by_id(id):
     req = DB.select_request_by_id(id)
     pretty_req = get_html_requests([req])
-    return render_template("request.html", table=pretty_req, id=id, host=req[1], request=urllib.parse.quote_plus(req[2]))
+    return render_template("request.html", table=pretty_req, id=id, host=req[1],
+                           request=quote_plus(req[2]))
 
 
 @app.route('/param-miner/<int:id>')
 def check_request_page(id):
     param_name = request.args.get('param')
+    change_what = request.args.get('change')
 
     req = list(DB.select_request_by_id(id))
     pretty_req = get_html_requests([req])
-    if not param_name:
+    if not param_name or not change_what:
         return render_template("check_request.html", table=pretty_req)
 
-    return check_request(req, param_name)
+    change_function = change_param_name if change_what == "name" else change_param_value
+    return check_request(req[1], req[2], req[3], param_name, change_function)
 
 
 def get_html_requests(requests):
@@ -83,7 +85,7 @@ def get_html_requests(requests):
             <th>id</th>
             <th>host</th>
             <th>request</th>
-            <th>Have TLS</th>
+            <th>Has TLS</th>
         </tr>
     </thead>
     <tbody>
@@ -108,13 +110,13 @@ def get_html_requests(requests):
 def repeat_request(id):
     req = list(DB.select_request_by_id(id))
 
-    reply, parser = http_request(req[2], req[1], req[3])
+    reply, parser = http_request(req[2], req[1], req[3], True)
     if not reply:
         reply = "No response".encode()
     else:
         headers_end_idx = reply.find(b'\r\n\r\n')
-        reply = b'<div class=headers>' + reply[:headers_end_idx].replace(b'\r\n', b'<br>') + b'</div>' + \
-                b'<div class=response>' + reply[headers_end_idx:] + b'</div>'
+        reply = b"<div class='headers'>" + reply[:headers_end_idx].replace(b"\r\n", b"<br>") + b"</div>" + \
+                b"<div id='response' class='response'>" + reply[headers_end_idx:] + b"</div>"
 
     file = open("./templates/response.html", "r")
     html = file.read()

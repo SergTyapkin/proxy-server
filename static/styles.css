@@ -2,7 +2,6 @@ body {
     margin: 0;
     min-height: 100vh;
     background: linear-gradient(-30deg, #262a33 0%, #401949 50%, #3e2c29 100%);
-    background-size: 100vw, 100vh;
 }
 h1 {
     color: #F0F0F0
@@ -10,6 +9,7 @@ h1 {
 .m-10 {
     margin: 10px;
 }
+
 .response,
 .headers,
 form {
@@ -21,6 +21,9 @@ form {
 form input,
 form textarea {
     background: linear-gradient(-40deg, #2c2f36 0%, #47244f 50%, #3f3230 100%);
+}
+form input:disabled {
+    opacity: 0.5;
 }
 
 * {
@@ -49,13 +52,16 @@ form textarea {
 
 .table-container {
     width: 96vw;
-    overflow: auto;
+    overflow: visible;
    -webkit-overflow-scrolling: touch;
 }
 table {
     border-collapse: collapse;
     width: 100%;
     margin: 10px;
+}
+thead {
+    pointer-events: none;
 }
 tr {
     background: linear-gradient(120deg, #794158 0%, rgba(70, 62, 49, 0.46) 50%, transparent 100%);
@@ -110,6 +116,52 @@ button.attention {
     border-radius: 0;
 }
 
+.switch-container {
+    display: flex;
+    margin-left: 25px;
+    justify-content: center;
+    align-items: center;
+}
+.switch-container * {
+    font-size: 30px;
+    margin: 0 5px;
+}
+.switch-container *.hidden {
+    opacity: 0.5;
+}
+.switch-btn {
+    display: inline-block;
+    width: 72px;
+    height: 38px;
+    border-radius: 19px;
+    background: linear-gradient(to right, #645247 0, #524a43 40%, #743ed0 60%, #6d118c 100%);
+    background-size: 180px 100%;
+    z-index: 0;
+    margin: 0;
+    padding: 0;
+    border: none;
+    cursor: pointer;
+    position: relative;
+    transition-duration: 300ms;
+}
+.switch-btn::after {
+    content: "";
+    height: 32px; /* высота кнопки */
+    width: 32px; /* ширина кнопки */
+    border-radius: 17px;
+    background: #fff;
+    top: 3px; /* положение кнопки по вертикали относительно основы */
+    left: 3px; /* положение кнопки по горизонтали относительно основы */
+    transition-duration: 300ms;
+    position: absolute;
+    z-index: 1;
+}
+.switch-on {
+    background-position-x: -100px;
+}
+.switch-on::after {
+    left: 37px;
+}
 
 @media(hover: hover) and (pointer: fine) {
     button {

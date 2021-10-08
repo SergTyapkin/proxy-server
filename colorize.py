@@ -1,26 +1,40 @@
+GREEN =      "\033[32m"
+BLUE =       "\033[34m"
+CYAN =       "\033[36m"
+YELLOW =     "\033[33m"
+RED =        "\033[31m"
+PURPLE =     "\033[35m"
+BLACK =      "\033[30m\033[47m"
+DEFAULT =    "\033[0m"
+BOLD =       "\033[1m"
+LIGHT =      "\033[2m"
+ITALIC =     "\033[3m"
+UNDERLINE =  "\033[4m"
+
+
 def green():
-    print("\033[32m", end="")
+    print(GREEN, end="")
 def blue():
-    print("\033[34m", end="")
+    print(BLUE, end="")
 def cyan():
-    print("\033[36m", end="")
+    print(CYAN, end="")
 def yellow():
-    print("\033[33m", end="")
+    print(YELLOW, end="")
 def red():
-    print("\033[31m", end="")
+    print(RED, end="")
 def purple():
-    print("\033[35m", end="")
+    print(PURPLE, end="")
 def black():
-    print("\033[30m\033[40m", end="")
+    print(BLACK, end="")
 
 def default():
-    print("\033[0m", end="")
+    print(DEFAULT, end="")
 
 def bold():
-    print("\033[1m", end="")
+    print(BOLD, end="")
 def light():
-    print("\033[2m", end="")
+    print(LIGHT, end="")
 def italic():
-    print("\033[3m", end="")
+    print(ITALIC, end="")
 def underline():
-    print("\033[4m", end="")
+    print(UNDERLINE, end="")
