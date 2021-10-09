@@ -1,0 +1,11 @@
+{% extends "template.html" %}
+{% block content %}
+
+<body class="m-10">
+    <p><button onclick="document.location='/'">На главную</button></p>
+    <button onclick="document.location='/clear_db'">Очистить данные запросов</button>
+    <br>
+    <button onclick="document.location='/reset_db'">Пересоздать базу данных</button>
+</body>
+
+{% endblock %}

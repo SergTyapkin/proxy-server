@@ -1,24 +1,48 @@
 {% extends "template.html" %}
 {% block content %}
 
-<body>
+<body class="m-20">
     <form action="" method="post">
         <h1>Отправить запрос</h1>
-        <label for="host">Host:</label>
+        <label for="host">Host:</label><br>
         <input id="host" type="text" name="host" placeholder="Не обязательно" value="{{ host }}">
 
-        <br>
-        <label for="request">Request:</label>
-        <textarea id="request" name="request" cols="80" rows="30">{{ request }}</textarea>
+        <p>
+        <label for="request">Request:</label><br>
+        <textarea id="request" name="request">{{ request }}</textarea>
+        </p>
 
-        <p></p>
-        <br>
-        <input id="https" type="checkbox" name="https">
-        <label for="https" class="checkbox">Use HTTPS</label>
+        <input id="https" type="checkbox" hidden name="https">
+
+        <p id="container" class="switch-container">
+            <span class="">HTTP</span>
+            <span id="switch" class="switch-btn"></span>
+            <span class="hidden">HTTPS</span>
+        </p>
 
         <p><input type="submit" value="Отправить"></p>
     </form>
+    <br>
     <button onclick="document.location='/'">На главную</button>
 </body>
+
+<script>
+    const container = document.getElementById('container');
+    const switchButton = document.getElementById('switch');
+    const httpsInput = document.getElementById('https');
+    switchButton.addEventListener('click', () => {
+        if (switchButton.classList.contains("switch-on")) {
+            httpsInput.removeAttribute("checked");
+            switchButton.classList.remove("switch-on");
+            container.firstElementChild.classList.remove("hidden");
+            container.lastElementChild.classList.add("hidden");
+        } else {
+            httpsInput.setAttribute("checked", "");
+            switchButton.classList.add("switch-on");
+            container.firstElementChild.classList.add("hidden");
+            container.lastElementChild.classList.remove("hidden");
+        }
+    });
+</script>
 
 {% endblock %}

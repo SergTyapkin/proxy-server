@@ -3,37 +3,18 @@ body {
     min-height: 100vh;
     background: linear-gradient(-30deg, #262a33 0%, #401949 50%, #3e2c29 100%);
 }
-h1 {
-    color: #F0F0F0
-}
-.m-10 {
-    margin: 10px;
-}
-
-.response,
-.headers,
-form {
-    margin: 20px;
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.07);
-    box-shadow: 0 0 10px black;
-}
-form input,
-form textarea {
-    background: linear-gradient(-40deg, #2c2f36 0%, #47244f 50%, #3f3230 100%);
-}
-form input:disabled {
-    opacity: 0.5;
-}
-
 * {
     color: #CFCFCF;
     font-family: Calibri;
-    font-size: 16px;
+    font-weight: bold;
+    font-size: 17px;
 
     scrollbar-width: thin;
     scrollbar-color: #2e173d #484040;
     scrollbar-highlight-color: #392946;
+}
+h1 {
+    font-size: 25px;
 }
 *::-webkit-scrollbar {
     height: 12px;
@@ -48,6 +29,88 @@ form input:disabled {
 }
 *::-webkit-scrollbar-thumb:hover {
   background-color: #392946;
+}
+
+h1 {
+    color: #F0F0F0
+}
+.m-10 {
+    margin: 10px;
+}
+.m-20 {
+    margin: 20px;
+}
+.absolute-wrapper {
+    position: relative;
+    height: 40px;
+    width: 100%;
+}
+.absolute-wrapper > * {
+    position: absolute;
+}
+
+svg.options {
+    overflow: visible;
+    fill: #ffffff15;
+    stroke: #e7b39c80;
+    stroke-width: 800px;
+    margin: 7px;
+    height: 26px;
+    width: 26px;
+    cursor: pointer;
+    transition: transform 0.3s ease, fill 0.2s ease, stroke 0.2s ease;
+    right: 0;
+}
+svg.options:hover {
+    transform: rotate(45deg);
+    fill: #ffffff30;
+    stroke: #e7b39cFF;
+}
+
+.response,
+.headers,
+form {
+    margin: 0;
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.07);
+    box-shadow: 0 0 10px black;
+}
+form input,
+form textarea {
+    background: linear-gradient(-40deg, #2c2f36 0%, #47244f 50%, #3f3230 100%);
+    font-weight: normal;
+}
+form input {
+    width: 50%;
+    padding: 3px 5px;
+}
+form textarea {
+    resize: vertical;
+    width: 100%;
+    height: 320px;
+}
+form input:disabled {
+    opacity: 0.5;
+}
+form input[type="submit"] {
+    width: 100%;
+    height: 50px;
+    font-size: 20px;
+    letter-spacing: 4px;
+    outline: none;
+    border: #5c5165 2px solid;
+    border-radius: 25px;
+    box-shadow: 0 -2px 8px black;
+    margin-top: 0;
+    margin-bottom: 0;
+    cursor: pointer;
+    transition: box-shadow 0.3s ease, border 0.3s ease, margin-top 0.3s ease, margin-bottom 0.3s ease;
+}
+form input[type="submit"]:hover {
+    border: #7c7186 2px solid;
+    box-shadow: 0 -2px 3px black;
+    margin-top: -2px;
+    margin-bottom: 2px;
 }
 
 .table-container {
@@ -76,32 +139,17 @@ th {
 }
 
 button {
-    padding: 5px;
+    padding: 5px 10px;
     border-radius: 5px;
     margin: 5px;
     border: none;
     outline: none;
     color: #A6A6A6;
     cursor: pointer;
-    font-family: sans-serif;
-    font-size: 1em;
-    letter-spacing: 0px;
     background: linear-gradient(120deg, #3c3554 10%, #2b0e16 100%);
     background-size: 200% 100%;
     background-position-x: 100%;
     transition: color 0.3s, background-position-x 0.3s;
-}
-button.attention {
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(120deg, #5f4179 0%, #332726 100%);
-    box-shadow: 3px 2px 3px black;
-    background-size: 200% 100%;
-    background-position-x: 100%;
-    border-radius: 7px;
-    font-weight: bold;
-    letter-spacing: 0px;
-    transition: color 0.3s, background 0.3s, box-shadow 0.3s;
 }
 .active {
     color: #e7b39c;
@@ -109,13 +157,15 @@ button.attention {
 }
 
 
-.fullwidth {
+.fullsize {
     width: 100%;
+    height: 100%;
     margin: 0;
     padding: 10px;
     border-radius: 0;
 }
 
+/* switch-button */
 .switch-container {
     display: flex;
     margin-left: 25px;
@@ -131,11 +181,11 @@ button.attention {
 }
 .switch-btn {
     display: inline-block;
-    width: 72px;
-    height: 38px;
-    border-radius: 19px;
+    width: 2em;
+    height: 1.1em;
+    border-radius: 0.55em;
     background: linear-gradient(to right, #645247 0, #524a43 40%, #743ed0 60%, #6d118c 100%);
-    background-size: 180px 100%;
+    background-size: 5em 100%;
     z-index: 0;
     margin: 0;
     padding: 0;
@@ -146,25 +196,26 @@ button.attention {
 }
 .switch-btn::after {
     content: "";
-    height: 32px; /* высота кнопки */
-    width: 32px; /* ширина кнопки */
-    border-radius: 17px;
+    height: 0.9em; /* высота кнопки */
+    width: 0.9em; /* ширина кнопки */
+    border-radius: 0.45em;
     background: #fff;
-    top: 3px; /* положение кнопки по вертикали относительно основы */
-    left: 3px; /* положение кнопки по горизонтали относительно основы */
+    top: 0.1em; /* положение кнопки по вертикали относительно основы */
+    left: 0.1em; /* положение кнопки по горизонтали относительно основы */
     transition-duration: 300ms;
     position: absolute;
     z-index: 1;
 }
 .switch-on {
-    background-position-x: -100px;
+    background-position-x: -3em;
 }
 .switch-on::after {
-    left: 37px;
+    left: 1em;
 }
 
 
-
+/* Checkbuttons */
+/*
 .group {
 	display: flex;
 	align-items: center;
@@ -201,7 +252,6 @@ label.checkbox:before {
 	z-index: -1;
 }
 
-/* Checked */
 input[type="checkbox"]:checked + label.checkbox {
     font-style: italic;
 	padding-left: 1em;
@@ -215,14 +265,13 @@ input[type="checkbox"]:checked + label.checkbox:before {
 	background: white;
 }
 
-/* Transition */
 label.checkbox,
 label.checkbox::before {
 	-webkit-transition: .25s all ease;
 	-o-transition: .25s all ease;
 	transition: .25s all ease;
 }
-
+*/
 
 @media(hover: hover) and (pointer: fine) {
     button {

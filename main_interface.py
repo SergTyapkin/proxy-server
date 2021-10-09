@@ -92,6 +92,11 @@ def repeat_request(id):
     return render_template("response.html", headers=headers, response=response)
 
 
+@app.route("/options")
+def options():
+    return render_template("options.html")
+
+
 @app.route("/clear_db")
 def clear_db():
     DB.clear()

@@ -36,13 +36,15 @@ class Database:
             self.cursor = self.db.cursor()
             self.cursor.execute(
                 """CREATE TABLE IF NOT EXISTS requests (
-                    id      SERIAL PRIMARY KEY,
-                    Host    TEXT NOT NULL,
-                    Method  TEXT NOT NULL,
-                    URL     TEXT NOT NULL,
-                    Headers TEXT NOT NULL,
-                    Cookie  TEXT NOT NULL,
-                    Has_TLS BOOLEAN DEFAULT FALSE
+                    id        SERIAL PRIMARY KEY,
+                    host      TEXT NOT NULL,
+                    method    TEXT NOT NULL,
+                    url       TEXT NOT NULL,
+                    headers   TEXT NOT NULL,
+                    cookie    TEXT NOT NULL,
+                    post_data TEXT NOT NULL,
+                    has_tls   BOOLEAN DEFAULT FALSE,
+                    response  TEXT NOT NULL
                 );""")
             print("Таблица requests создана")
         except psycopg2.Error as error:
@@ -58,7 +60,7 @@ class Database:
             print("База данных не была инициализирована. Операция отменена")
             return
         cur = self.db.cursor()
-        cur.execute("INSERT INTO requests(host, Method, URL, Headers, Cookie, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s)",
+        cur.execute("INSERT INTO requests(host, method, url, headers, cookie, post_data, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s)",
                     [host, method, url, headers, cookie, tls])
         cur.close()
 
@@ -84,12 +86,14 @@ class Database:
         cur = self.db.cursor()
         cur.execute(
             """CREATE TABLE IF NOT EXISTS requests (
-                id      SERIAL PRIMARY KEY,
-                Host    TEXT NOT NULL,
-                Method  TEXT NOT NULL,
-                URL     TEXT NOT NULL,
-                Headers TEXT NOT NULL,
-                Cookie  TEXT NOT NULL,
-                Has_TLS BOOLEAN DEFAULT FALSE
+                id        SERIAL PRIMARY KEY,
+                host      TEXT NOT NULL,
+                method    TEXT NOT NULL,
+                url       TEXT NOT NULL,
+                headers   TEXT NOT NULL,
+                cookie    TEXT NOT NULL,
+                post_data TEXT NOT NULL,
+                has_tls   BOOLEAN DEFAULT FALSE,
+                response  TEXT NOT NULL
             );""")
         cur.close()
