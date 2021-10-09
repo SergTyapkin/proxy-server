@@ -19,7 +19,7 @@ CA_CERT = "ca.cert"
 CA_KEY = "ca.key"
 
 CONNECTION_ESTABILISHED = b'HTTP/1.1 200 Connection Established\r\n\r\n'
-
+RESPONSE_PREVIEW_LEN = 400
 
 # cl_... is client variables
 # sv_... is remote web-server variables
@@ -41,7 +41,7 @@ def proxy_http(cl_parser, cl_sock, DB, post_data):
     wsgi = cl_parser.get_wsgi_environ()
     print(wsgi)
     str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    str_headers += headers_to_string(headers)
+    str_headers += headers_to_string(headers, ['cookie'])
     sv_request = str_headers + post_data
 
     # get answer from server
@@ -60,7 +60,9 @@ def proxy_http(cl_parser, cl_sock, DB, post_data):
         response = 'Proxy can\'t decode response'
     if post_data == '':
         post_data = None
-    DB.insert_request(host, wsgi['REQUEST_METHOD'], cl_parser.get_url(), str_headers, headers.get('COOKIE'), post_data, response)
+    if len(response) > RESPONSE_PREVIEW_LEN:
+        response = response[:RESPONSE_PREVIEW_LEN] + '...'
+    DB.insert_request(host, wsgi['REQUEST_METHOD'], cl_parser.get_url(), str_headers, headers.get('COOKIE').replace(' ', '\n'), post_data, response)
 
 
 def cleanup_headers(headers: dict):
@@ -91,8 +93,7 @@ def proxy_https(cl_parser, cl_sock, DB):
     # get http request from https connection
     cl_http_parser = HttpParser()
     cl_http_request = receive_data(cl_sock_secure, cl_http_parser)
-    print(cl_http_request)
-    print(cl_http_parser.get_wsgi_environ())
+
     # get reply from server
     sv_reply, _ = http_request(cl_http_request, host, secure=True)
 
@@ -107,16 +108,18 @@ def proxy_https(cl_parser, cl_sock, DB):
     cleanup_headers(headers)
     wsgi = cl_http_parser.get_wsgi_environ()
     str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    str_headers += headers_to_string(headers)
+    str_headers += headers_to_string(headers, ['cookie'])
     str_headers.replace('\r', '')
     try:
         response = sv_reply.decode()
     except UnicodeDecodeError:
         response = 'Proxy can\'t decode response'
-    post_data = get_post_data(cl_http_request)
+    post_data = get_post_data(cl_http_request).strip('\n ')
     if post_data == '':
         post_data = None
-    DB.insert_request(host, wsgi['REQUEST_METHOD'], host + cl_http_parser.get_url(), str_headers, headers.get('COOKIE'), post_data, response, True)
+    if len(response) > RESPONSE_PREVIEW_LEN:
+        response = response[:RESPONSE_PREVIEW_LEN] + '...'
+    DB.insert_request(host, wsgi['REQUEST_METHOD'], host + cl_http_parser.get_url(), str_headers, headers.get('COOKIE').replace(' ', '\n'), post_data, response, True)
 
 
 def generate_cert(host: str) -> str:

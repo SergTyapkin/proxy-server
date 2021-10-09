@@ -2,13 +2,13 @@
 {% block content %}
 
 <body>
-    <button class="fullwidth" onclick="document.location='/request'">Отправить свой запрос</button>
+    <button class="fullsize" onclick="document.location='/request'">Отправить свой запрос</button>
     <div class="table-container">
         {{ table|safe }}
     </div>
     <button onclick="document.location='/'">На главную</button>
     <button onclick="document.location='/repeat/{{ id }}'">Повторить</button>
-    <button onclick="document.location='/request?host={{ host }}&request={{ request }}'">Изменить</button>
+    <button onclick="document.location='/request?host={{ host }}&request={{ request }}&protocol={{ protocol }}'">Изменить</button>
     <button onclick="document.location='/param-miner/{{ id }}'">Проверить param-miner'ом</button>
 </body>
 

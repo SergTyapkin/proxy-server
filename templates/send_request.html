@@ -12,11 +12,11 @@
         <textarea id="request" name="request">{{ request }}</textarea>
         </p>
 
-        <input id="https" type="checkbox" hidden name="https">
+        <input id="https" type="checkbox" hidden name="https" value="yes" {% if secure %}checked{% endif %}>
 
         <p id="container" class="switch-container">
             <span class="">HTTP</span>
-            <span id="switch" class="switch-btn"></span>
+            <span id="switch" class="switch-btn {% if secure %}switch-on{% endif %}"></span>
             <span class="hidden">HTTPS</span>
         </p>
 

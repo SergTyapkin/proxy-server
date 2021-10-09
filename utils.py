@@ -49,3 +49,19 @@ def html_prettify(headers: list, body: list, multilines: bool = False, row_oncli
     tbody += "</tbody>\n"
 
     return "<table>\n" + thead + tbody + "</table>"
+
+    '''tbody = "<div class=\"grid-rows\">\n"
+    trow = "<div class=\"grid-columns\">\n"
+    for header in headers:
+        trow += "<div>" + header + "</div>\n"
+    trow += "</div>\n"
+    tbody += trow
+
+    for row in body:
+        trow = "<div class=\"grid-columns\"" + ((" onclick=" + row_onclick(row[0]) + " style=\"cursor: pointer\"") if row_onclick else "") + ">\n"
+        for value in row:
+            trow += "<div>" + value_foo(value) + "</div>"
+        trow += "</div>\n"
+        tbody += trow
+
+    return tbody + "</div>"'''

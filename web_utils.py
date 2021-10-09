@@ -61,7 +61,7 @@ def http_request(request: (str, bytes), host: str, secure: bool = False, gzip_de
     if isinstance(request, bytes):
         sv_sock.sendall(request + b'\r\n\r\n')
     else:
-        sv_sock.sendall((request + '\n\n').replace(' \n', '\r\n').encode())
+        sv_sock.sendall((request + '\n\n').replace('\n', '\r\n').encode())
 
     sv_parser = HttpParser()
     sv_reply = receive_data(sv_sock, sv_parser)
@@ -72,19 +72,21 @@ def http_request(request: (str, bytes), host: str, secure: bool = False, gzip_de
 
     # decode from gzip
     headers = sv_parser.get_headers()
-    headers_and_body = sv_reply.split(b'\r\n\r\n')
-    if len(headers_and_body) > 1 and headers.get('content-encoding') == "gzip":
-        recv_body = headers_and_body[1]
-        sv_reply = sv_reply[:sv_reply.find(b'\r\n')].strip() + b'\n'  # HTTP/1.1 200
-        sv_reply += headers_to_string(headers, ['content-encoding', 'transfer-encoding']).replace('\n', '\r\n').encode() + b'\r\n'
-        if sv_parser.is_chunked():
-            splitted_body = recv_body.split(b'\r\n')
-            recv_body = b''
-            for i in range(1, len(splitted_body), 2):
-                recv_body += splitted_body[i]
-        recv_body = gzip.decompress(recv_body)
-        sv_reply += recv_body
-    return sv_reply, sv_parser
+    headers_and_response = sv_reply.split(b'\r\n\r\n')
+    decoded_body = headers_and_response[1]
+
+    decoded_headers = sv_reply[:sv_reply.find(b'\r\n')] + b'\r\n'  # HTTP/1.1 200
+    decoded_headers += headers_to_string(headers, ['transfer-encoding', 'content-encoding']).replace('\n', '\r\n').encode() + b'\r\n'
+    if sv_parser.is_chunked():
+        splitted_body = decoded_body.split(b'\r\n')
+        decoded_body = b''
+        for i in range(1, len(splitted_body), 2):
+            decoded_body += splitted_body[i]
+
+    if len(headers_and_response) > 1 and headers.get('content-encoding') == "gzip":
+        decoded_body = gzip.decompress(decoded_body) + b'\n\n'
+
+    return decoded_headers + decoded_body, sv_parser
 
 
 def get_post_data(data: bytes) -> str:

@@ -14,7 +14,7 @@ DB = Database(config)
 
 def decode_http_request(req, host, secure):
     try:
-        reply, _ = http_request(req, host, secure, True)
+        reply, _ = http_request(req, host, secure, gzip_decode=True)
     except:
         reply = None
 
@@ -22,6 +22,7 @@ def decode_http_request(req, host, secure):
     response = ["No response"]
     if reply:
         headers_end_idx = reply.find(b'\r\n\r\n')
+        response_start_idx = headers_end_idx + len(b'\r\n\r\n')
         try:
             headers = reply[:headers_end_idx].decode()
             headers = headers.split('\n')
@@ -29,11 +30,20 @@ def decode_http_request(req, host, secure):
             headers = ["Не удалось раскодировать заголовки"]
 
         try:
-            response = reply[headers_end_idx:].decode()
+            response = reply[response_start_idx:].decode()
             response = response.replace('\r', '').strip('\n').split('\n')
         except UnicodeDecodeError:
-            response = ["Не удалось раскодировать тело ответа:", reply[headers_end_idx:]]
+            response = ["Не удалось раскодировать тело ответа:", reply[response_start_idx:]]
     return headers, response
+
+
+def compress_to_request(req: list) -> str:
+    req_body = req[4]  # headers
+    if req[5]:  # cookie
+        req_body += "COOKIE: " + req[5].replace('\n', ' ') + '\n'
+    if req[6]:  # post_data
+        req_body += '\n' + req[6]
+    return req_body
 
 
 @app.route('/')
@@ -48,11 +58,13 @@ def send_request():
     if request.method == 'GET':
         host = request.args.get('host')
         req = request.args.get('request')
-        return render_template("send_request.html", host="" if host is None else host, request="" if req is None else req)
+        secure = True if request.args.get('protocol') == 'https' else False
+        return render_template("send_request.html", host="" if host is None else host,
+                               request="" if req is None else req, secure=secure)
 
     host = request.form.get('host').strip().replace('\r', '')
     req = request.form.get('request').strip().replace('\r', '')
-    secure = True if request.form.get('https') is not None else False
+    secure = True if request.form.get('https') == 'yes' else False
     if not host:  # autocomplete Host
         host_end_idx = host_start_idx = req.lower().find("host:") + len("host:")
         while host_end_idx < len(req) and req[host_end_idx] not in ['\n', '/']:
@@ -69,7 +81,7 @@ def get_request_by_id(id):
     req[7] = Markup.escape(req[7])  # Escape tags in response
     pretty_req = html_prettify(table_headers, [req], True)
     return render_template("request.html", table=pretty_req, id=id, host=req[1],
-                           request=quote_plus(req[2]))
+                           request=quote_plus(compress_to_request(req)), protocol='https' if req[8] else 'http')
 
 
 @app.route('/param-miner/<int:id>')
@@ -89,7 +101,8 @@ def check_request_page(id):
 @app.route("/repeat/<int:id>")
 def repeat_request(id):
     req, _ = DB.select_request_by_id(id)
-    headers, response = decode_http_request(req[2], req[1], req[3])
+
+    headers, response = decode_http_request(compress_to_request(req), req[1], req[8])
     return render_template("response.html", headers=headers, response=response)
 
 
