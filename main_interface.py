@@ -1,6 +1,6 @@
 from urllib.parse import quote_plus
 
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, Markup
 from database import *
 
 from param_checker import *
@@ -66,6 +66,7 @@ def send_request():
 @app.route('/request/<int:id>')
 def get_request_by_id(id):
     req, table_headers = DB.select_request_by_id(id)
+    req[7] = Markup.escape(req[7])  # Escape tags in response
     pretty_req = html_prettify(table_headers, [req], True)
     return render_template("request.html", table=pretty_req, id=id, host=req[1],
                            request=quote_plus(req[2]))
@@ -76,8 +77,8 @@ def check_request_page(id):
     param_name = request.args.get('param')
     change_what = request.args.get('change')
 
-    req, table_headers = list(DB.select_request_by_id(id))
-    pretty_req = html_prettify(table_headers, req, True, lambda idx: f"window.location.href='/request/{idx}'")
+    req, table_headers = DB.select_request_by_id(id)
+    pretty_req = html_prettify(table_headers, [req], True, lambda idx: f"window.location.href='/request/{idx}'")
     if not param_name or not change_what:
         return render_template("check_request.html", table=pretty_req)
 
@@ -105,7 +106,8 @@ def clear_db():
 
 @app.route("/reset_db")
 def reset_db():
-    DB.reset()
+    DB.drop()
+    DB.init()
     return render_template("response.html", headers=["База данных успешно пересоздана"], response=["А вот теперь индексы с 1 начнутся"])
 
 

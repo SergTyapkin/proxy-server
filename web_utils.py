@@ -85,3 +85,7 @@ def http_request(request: (str, bytes), host: str, secure: bool = False, gzip_de
         recv_body = gzip.decompress(recv_body)
         sv_reply += recv_body
     return sv_reply, sv_parser
+
+
+def get_post_data(data: bytes) -> str:
+    return data[data.rfind(b'\r\n\r\n') + len(b'\r\n\r\n'):].decode()

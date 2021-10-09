@@ -33,56 +33,44 @@ class Database:
             self.cursor.close()
 
         try:
-            self.cursor = self.db.cursor()
-            self.cursor.execute(
-                """CREATE TABLE IF NOT EXISTS requests (
-                    id        SERIAL PRIMARY KEY,
-                    host      TEXT NOT NULL,
-                    method    TEXT NOT NULL,
-                    url       TEXT NOT NULL,
-                    headers   TEXT NOT NULL,
-                    cookie    TEXT NOT NULL,
-                    post_data TEXT NOT NULL,
-                    has_tls   BOOLEAN DEFAULT FALSE,
-                    response  TEXT NOT NULL
-                );""")
+            self.init()
             print("Таблица requests создана")
         except psycopg2.Error as error:
             print("Ошибка при создании таблицы", error)
             return
-        finally:
-            self.cursor.close()
 
         self.initialized = True
 
-    def insert_request(self, host: str, method: str, url: str, headers: str, cookie: str, tls: bool = False):
+    def insert_request(self, host: str, method: str, url: str, headers: str, cookie: str, post_data: str, response: str, tls: bool = False):
         if not self.initialized:
             print("База данных не была инициализирована. Операция отменена")
             return
         cur = self.db.cursor()
-        cur.execute("INSERT INTO requests(host, method, url, headers, cookie, post_data, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s)",
-                    [host, method, url, headers, cookie, tls])
+        cur.execute("INSERT INTO requests(host, method, url, headers, cookie, post_data, response, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)",
+                    [host, method, url, headers, cookie, post_data, response, tls])
         cur.close()
 
     def select_all_requests(self):
         cur = self.db.cursor()
-        cur.execute("SELECT * FROM requests ORDER BY id DESC LIMIT 500")
+        cur.execute("SELECT id, host, method, url, headers, cookie, post_data, Has_TLS FROM requests ORDER BY id DESC LIMIT 500")
         return cur.fetchall(), [desc[0] for desc in cur.description]
 
     def select_request_by_id(self, id):
         cur = self.db.cursor()
-        cur.execute("SELECT * FROM requests WHERE id=%s", [id])
-        return cur.fetchone(), [desc[0] for desc in cur.description]
+        cur.execute("SELECT id, host, method, url, headers, cookie, post_data, response, Has_TLS FROM requests WHERE id=%s", [id])
+        return list(cur.fetchone()), [desc[0] for desc in cur.description]
 
     def clear(self):
         cur = self.db.cursor()
         cur.execute("TRUNCATE TABLE requests")
         cur.close()
 
-    def reset(self):
+    def drop(self):
         cur = self.db.cursor()
-        cur.execute("DROP TABLE requests")
+        cur.execute("DROP TABLE IF EXISTS requests")
         cur.close()
+
+    def init(self):
         cur = self.db.cursor()
         cur.execute(
             """CREATE TABLE IF NOT EXISTS requests (
@@ -91,9 +79,9 @@ class Database:
                 method    TEXT NOT NULL,
                 url       TEXT NOT NULL,
                 headers   TEXT NOT NULL,
-                cookie    TEXT NOT NULL,
-                post_data TEXT NOT NULL,
+                cookie    TEXT,
+                post_data TEXT,
                 has_tls   BOOLEAN DEFAULT FALSE,
-                response  TEXT NOT NULL
+                response  TEXT
             );""")
         cur.close()

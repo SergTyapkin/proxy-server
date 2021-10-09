@@ -25,7 +25,7 @@ CONNECTION_ESTABILISHED = b'HTTP/1.1 200 Connection Established\r\n\r\n'
 # sv_... is remote web-server variables
 
 
-def proxy_http(cl_parser, cl_sock, DB):
+def proxy_http(cl_parser, cl_sock, DB, post_data):
     headers = cl_parser.get_headers()
     if len(headers.keys()) < 2:
         cl_sock.close()
@@ -36,12 +36,16 @@ def proxy_http(cl_parser, cl_sock, DB):
 
     # prepare request to server
     cleanup_headers(headers)
+
+
     wsgi = cl_parser.get_wsgi_environ()
-    sv_request = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    sv_request += headers_to_string(headers)
+    print(wsgi)
+    str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
+    str_headers += headers_to_string(headers)
+    sv_request = str_headers + post_data
 
     # get answer from server
-    reply, sv_parser = http_request(sv_request, host)
+    reply, _ = http_request(sv_request, host)
 
     # re-send answer to client
     cl_sock.sendall(reply)
@@ -50,8 +54,13 @@ def proxy_http(cl_parser, cl_sock, DB):
     print(CYAN + UNDERLINE + "CLOSED:", host, DEFAULT)
 
     # insert request into database
-    sv_request.replace('\r', '')
-    DB.insert_request(sv_request, host)
+    try:
+        response = reply.decode()
+    except UnicodeDecodeError:
+        response = 'Proxy can\'t decode response'
+    if post_data == '':
+        post_data = None
+    DB.insert_request(host, wsgi['REQUEST_METHOD'], cl_parser.get_url(), str_headers, headers.get('COOKIE'), post_data, response)
 
 
 def cleanup_headers(headers: dict):
@@ -82,9 +91,10 @@ def proxy_https(cl_parser, cl_sock, DB):
     # get http request from https connection
     cl_http_parser = HttpParser()
     cl_http_request = receive_data(cl_sock_secure, cl_http_parser)
-
+    print(cl_http_request)
+    print(cl_http_parser.get_wsgi_environ())
     # get reply from server
-    sv_reply, sv_parser = http_request(cl_http_request, host, True)
+    sv_reply, _ = http_request(cl_http_request, host, secure=True)
 
     # re-send answer to client
     cl_sock_secure.sendall(sv_reply)
@@ -92,14 +102,21 @@ def proxy_https(cl_parser, cl_sock, DB):
 
     print(CYAN + UNDERLINE + "CLOSED:", host, DEFAULT)
 
-    # prepare request to save in database
+    # insert request into database
     headers = cl_http_parser.get_headers()
     cleanup_headers(headers)
     wsgi = cl_http_parser.get_wsgi_environ()
-    request_to_save = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    request_to_save += headers_to_string(headers | cl_http_parser.get_headers())
-    request_to_save.replace('\r', '')
-    DB.insert_request(request_to_save, host, True)
+    str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
+    str_headers += headers_to_string(headers)
+    str_headers.replace('\r', '')
+    try:
+        response = sv_reply.decode()
+    except UnicodeDecodeError:
+        response = 'Proxy can\'t decode response'
+    post_data = get_post_data(cl_http_request)
+    if post_data == '':
+        post_data = None
+    DB.insert_request(host, wsgi['REQUEST_METHOD'], host + cl_http_parser.get_url(), str_headers, headers.get('COOKIE'), post_data, response, True)
 
 
 def generate_cert(host: str) -> str:
@@ -133,10 +150,9 @@ if __name__ == "__main__":
             if parser.get_method() == "CONNECT":
                 start_new_thread(proxy_https, (parser, cl_sock, DB))
             else:
-                start_new_thread(proxy_http, (parser, cl_sock, DB))
+                start_new_thread(proxy_http, (parser, cl_sock, DB, get_post_data(data)))
 
         except KeyboardInterrupt:
-            cl_sock.close()
             exit()
         except Exception as e:
             cl_sock.close()

@@ -1,20 +1,19 @@
 {% extends "template.html" %}
 {% block content %}
 
-<body>
+<body class="m-20">
     {{ table|safe }}
     <form action="" method="get">
         <h1>Проверить запрос на уязвимость</h1>
-
         <p>
             <div>Перебирать:</div>
-            <div onclick="paramName.setAttribute('disabled', ''); paramValue.removeAttribute('disabled')">
-                <input id="name" name="change" type="radio" value="name" checked>
-                <label for="name">Имена параметра</label>
+            <div>
+                <input id="name" name="change" type="radio" value="name">
+                <label for="name" class="checkbox" onclick="paramName.setAttribute('disabled', ''); paramValue.removeAttribute('disabled')">Имена параметра</label>
             </div>
-            <div onclick="paramValue.setAttribute('disabled', ''); paramName.removeAttribute('disabled')">
+            <div>
                 <input id="value" name="change" type="radio" value="value">
-                <label for="value">Значения параметра</label>
+                <label for="value" class="checkbox" onclick="paramValue.setAttribute('disabled', ''); paramName.removeAttribute('disabled')">Значения параметра</label>
             </div>
         </p>
 
@@ -23,11 +22,12 @@
             ?<input id="paramName" type="text" name="param" size="30" disabled>=[перебирается]
             <br>
             <label for="paramValue">Значение параметра:</label>
-            ?[перебирается]=<input id="paramValue" type="text" name="param" size="30">
+            ?[перебирается]=<input id="paramValue" type="text" name="param" size="30" disabled>
         </p>
-
-        <p><input type="submit" value="Проверить"></p>
+        <br>
+        <input type="submit" value="Проверить">
     </form>
+    <br>
     <button onclick="document.location='/'">На главную</button>
     <button onclick="history.go(-1)">К запросу</button>
 </body>
