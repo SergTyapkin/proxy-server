@@ -10,7 +10,7 @@ good_values = [
     "waefqgse",
 ]
 
-FILENAME = "small_param_samples.txt"
+FILENAME = "param_samples.txt"
 THREADS = 20
 
 
