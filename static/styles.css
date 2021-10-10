@@ -16,6 +16,12 @@ body {
 h1 {
     font-size: 25px;
 }
+h2 {
+    font-size: 22px;
+}
+h3 {
+    font-size: 20px;
+}
 *::-webkit-scrollbar {
     height: 12px;
     width: 12px;
@@ -296,9 +302,6 @@ label.checkbox::before {
 	transition: .25s all ease;
 }
 
-.list ul {
-    list-style: none;
-}
 .list-wrapper {
     cursor: pointer;
     letter-spacing: 1px;

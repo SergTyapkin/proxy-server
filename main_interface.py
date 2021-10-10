@@ -93,11 +93,11 @@ def check_request_by_id(id):
     req, table_headers = DB.select_request_by_id(id)
     pretty_req = html_prettify(table_headers, [req], True, lambda idx: f"window.location.href='/request/{idx}'")
     if not param_name or not change_what:
-        return render_template("check_request.html", table=pretty_req)
+        return render_template("check_request.html", table=pretty_req, id=id)
 
     change_function = change_param_name if change_what == "name" else change_param_value
     result, params = check_request(req[1], compress_to_request(req), req[8], param_name, change_function)
-    return render_template("check_result.html", result=result, params=params)
+    return render_template("check_result.html", result=result, params=params, id=id, host=req[1])
 
 
 @app.route("/repeat/<int:id>")
