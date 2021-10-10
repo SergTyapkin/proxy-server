@@ -1,4 +1,5 @@
-import random
+import threading
+from itertools import islice
 
 from main_proxy import http_request
 from utils import str_between, count_lines
@@ -10,6 +11,7 @@ good_values = [
 ]
 
 FILENAME = "small_param_samples.txt"
+THREADS = 20
 
 
 def change_param_value(request, param_name, param_value):
@@ -48,51 +50,82 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
     normal_len = None
 
     for good_param in good_values:
-        cur_request, _ = check_function(request, param_name, good_param)
+        cur_request, url = check_function(request, param_name, good_param)
         response, parser = http_request(cur_request, host, secure)
         splitted_response = response.split(b'\r\n\r\n')
-        reply = splitted_response[1] if len(splitted_response) >= 2 else ''
+        reply = splitted_response[1] if len(splitted_response) >= 2 else b''
         cur_len = int(parser.get_headers().get('content-length'))
         if not normal_reply:
             normal_reply = reply
             normal_request = cur_request
             normal_len = cur_len
         elif reply != normal_reply or cur_len != normal_len:
-            return "<h1>Не получается начать проверку</h1><br>" \
-                   "Ответы должны быть одинаковы, но на запрос:<br>" + normal_request +\
-                   "<br>Ответ:<br>" + str(normal_reply) + \
-                   "<br><br>А на запрос:<br>" + cur_request + \
-                   "<br>Ответ:<br>" + str(reply), None
+            if reply.find(good_param.encode()) != -1:
+                return "Скорее всего, запрос уязвим", \
+                    [("Не удалось начать проверку, но:", 1),
+                     (url + " - Найдено \"" + good_param + "\" в ответе!", 2)]
+            return "Не получается начать проверку", \
+                   [("Ответы должны быть одинаковы", 1),
+                    ("Но на запрос:", 1), (normal_request, 0),
+                    ("Ответ: ", 1), (str(normal_reply), 0),
+                    ("", 1),
+                    ("А на запрос:", 1), (cur_request, 0),
+                    ("Ответ: ", 1), (str(reply), 0)]
 
     log = []
-    found_exploits = False
-    with open(FILENAME, "r") as file:
-        while True:
-            param = file.readline()
-            if not param:
-                break
-            param = param.rstrip('\n')
+    found_exploits = [False]  # to make mutable
+    mutex = threading.Condition()
 
-            cur_request, url = check_function(request, param_name, param)
-            print(count_lines(FILENAME))
-            response, parser = http_request(cur_request, host, secure)
-            splitted_response = response.split(b'\r\n\r\n')
-            reply = splitted_response[1] if len(splitted_response) >= 2 else ''
-            cur_len = int(parser.get_headers().get('content-length'))
-            if reply != normal_reply:
-                found_exploits = True
-                log.append(url + " - Different content")
-                print(param, "BAD content")
-            elif cur_len != normal_len:
-                found_exploits = True
-                log.append(url + " - Different length")
-                print(param, "BAD length")
-            else:
-                log.append(url + " - OK")
-                print(param, "GOOD")
+    def check_values_between(start: int, end: int):
+        with open(FILENAME, 'r') as file:
+            params = islice(file, start, end)
+            for param in params:
+                if not param:
+                    continue
+                param = param.rstrip('\n')
 
-    if not found_exploits:
+                cur_request, url = check_function(request, param_name, param)
+
+                response, parser = http_request(cur_request, host, secure)
+                splitted_response = response.split(b'\r\n\r\n')
+                reply = splitted_response[1] if len(splitted_response) >= 2 else b''
+                cur_len = int(parser.get_headers().get('content-length'))
+                found = False
+                if reply != normal_reply:
+                    found = True
+                    result = [url + " - Отличается ответ", 1]
+                elif cur_len != normal_len:
+                    found = True
+                    result = [url + " - Отличается длина", 1]
+                else:
+                    result = [url + " - OK", 0]
+
+                if found and (reply.find(param_name.encode()) != -1):
+                    result[0] += ". Найдено \"" + param_name + "\" в ответе!"
+                    result[1] = 2
+
+                mutex.acquire()
+                if found:
+                    found_exploits[0] = True
+                log.append(result)
+                mutex.release()
+
+    lines = count_lines(FILENAME)
+    lines_per_thread = lines // THREADS
+    cur_line = 0
+    threads = []
+    for i in range(THREADS):
+        if i != THREADS - 1:
+            thread = threading.Thread(target=check_values_between, args=(cur_line, cur_line + lines_per_thread))
+        else:
+            thread = threading.Thread(target=check_values_between, args=(cur_line, lines))
+        cur_line += lines_per_thread
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    if not found_exploits[0]:
         return "Уязвимостей не обнаружено", log
     return "Найдены уязвимости!", log
-
-

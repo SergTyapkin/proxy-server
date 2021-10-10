@@ -12,15 +12,21 @@
     <div id="wrapper" class="list-wrapper">Подробно...</div>
     <div id="list" class="list">
         <ul id="list-content">
-            {% for param in params %}
-            <li>{{ param }}</li>
+            {% for param, code in params %}
+                {% if code == 1 %}
+                    <li class="warning">{{ param }}</li>
+                {% elif code == 2 %}
+                    <li class="error">{{ param }}</li>
+                {% else %}
+                    <li class="">{{ param }}</li>
+                {% endif %}
             {% endfor %}
         </ul>
     </div>
 
     <button onclick="document.location='/'">На главную</button>
     <button onclick="document.location='/request/{{ id }}'">К запросу</button>
-    <button onclick="document.location='/param-miner/{{ id }}'">Изменить параметры</button>
+    <button onclick="document.location='/param-miner/{{ id }}'">Изменить параметры проверки</button>
 </body>
 
 <script>

@@ -313,6 +313,19 @@ label.checkbox::before {
     max-height: 10px;
     transition: max-height 0.3s ease;
 }
+.warning {
+    font-size: 18px;
+    color: #e8b94e;
+}
+ul {
+    margin: 0;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+.error {
+    font-size: 20px;
+    color: #ee4731;
+}
 
 @media(hover: hover) and (pointer: fine) {
     button {
