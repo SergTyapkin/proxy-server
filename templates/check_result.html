@@ -1,0 +1,38 @@
+{% extends "template.html" %}
+{% block content %}
+
+<body class="m-20">
+    <p>
+        <h1>{{ result }}</h1>
+        <div id="wrapper" class="list-wrapper">Подробно...</div>
+        <div id="list" class="list">
+            <ul id="list-content">
+                {% for param in params %}
+                <li>{{ param }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </p>
+    <button onclick="document.location='/'">На главную</button>
+    <button onclick="document.location='/request/{{ id }}'">К запросу</button>
+    <button onclick="document.location='/param-miner/{{ id }}'">Изменить параметры</button>
+</body>
+
+<script>
+    wrapper = document.getElementById('wrapper');
+    list = document.getElementById('list');
+    listContent = document.getElementById('list-content');
+    list.style.maxHeight = '10px';
+    wrapper.addEventListener('click', () => {
+        if (wrapper.classList.contains('opened')) {
+            wrapper.classList.remove('opened');
+            list.style.maxHeight = '10px';
+
+        } else {
+            wrapper.classList.add('opened');
+            list.style.maxHeight = listContent.clientHeight + 'px';
+        }
+    });
+</script>
+
+{% endblock %}

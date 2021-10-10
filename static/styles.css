@@ -62,11 +62,6 @@ svg.options {
     transition: transform 0.3s ease, fill 0.2s ease, stroke 0.2s ease;
     right: 0;
 }
-svg.options:hover {
-    transform: rotate(45deg);
-    fill: #ffffff30;
-    stroke: #e7b39cFF;
-}
 
 .response,
 .headers,
@@ -107,17 +102,11 @@ form input[type="submit"] {
     cursor: pointer;
     transition: box-shadow 0.2s ease, border 0.3s ease, margin-top 0.2s ease, margin-bottom 0.2s ease;
 }
-form input[type="submit"]:hover {
-    border: #7c7186 2px solid;
-    box-shadow: 0 -2px 3px black;
-    margin-top: -2px;
-    margin-bottom: 2px;
-}
+
 
 .table-container {
-    width: 200%;
-    overflow: visible;
-   -webkit-overflow-scrolling: touch;
+    width: 100%;
+    overflow-x: scroll;
 }
 
 /*.grid-rows {
@@ -139,7 +128,7 @@ form input[type="submit"]:hover {
 
 table {
     border-collapse: collapse;
-    width: 100%;
+    width: 200%;
     margin: 10px;
 }
 tr {
@@ -307,6 +296,21 @@ label.checkbox::before {
 	transition: .25s all ease;
 }
 
+.list ul {
+    list-style: none;
+}
+.list-wrapper {
+    cursor: pointer;
+    letter-spacing: 1px;
+    opacity: 0.8;
+    transition: letter-spacing 0.3s ease, opacity 0.3s ease;
+}
+.list-wrapper + .list {
+    overflow: hidden;
+    max-height: 10px;
+    transition: max-height 0.3s ease;
+}
+
 @media(hover: hover) and (pointer: fine) {
     button {
         letter-spacing: 2px;
@@ -327,4 +331,22 @@ label.checkbox::before {
         color: #F6F6F6;
         background-position-x: 0;
     }
+    form input[type="submit"]:hover {
+        border: #7c7186 2px solid;
+        box-shadow: 0 -2px 3px black;
+        margin-top: -2px;
+        margin-bottom: 2px;
+    }
+    svg.options:hover {
+        transform: rotate(45deg);
+        fill: #ffffff30;
+        stroke: #e7b39cFF;
+    }
+    .list-wrapper:hover {
+        opacity: 1;
+    }
+}
+
+.list-wrapper.opened {
+    letter-spacing: 3px;
 }

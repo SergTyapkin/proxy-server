@@ -35,14 +35,8 @@ def proxy_http(cl_parser, cl_sock, DB, post_data):
     print(YELLOW + "HTTP:", host, headers, DEFAULT)
 
     # prepare request to server
-    cleanup_headers(headers)
-
-
-    wsgi = cl_parser.get_wsgi_environ()
-    print(wsgi)
-    str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    str_headers += headers_to_string(headers, ['cookie'])
-    sv_request = str_headers + post_data
+    host, method, url, str_headers, cookie = split_request(host, cl_parser)
+    sv_request = str_headers + '\n' + post_data
 
     # get answer from server
     reply, _ = http_request(sv_request, host)
@@ -62,19 +56,8 @@ def proxy_http(cl_parser, cl_sock, DB, post_data):
         post_data = None
     if len(response) > RESPONSE_PREVIEW_LEN:
         response = response[:RESPONSE_PREVIEW_LEN] + '...'
-    DB.insert_request(host, wsgi['REQUEST_METHOD'], cl_parser.get_url(), str_headers, headers.get('COOKIE').replace(' ', '\n'), post_data, response)
+    DB.insert_request(host, method, url, str_headers, cookie, post_data, response)
 
-
-def cleanup_headers(headers: dict):
-    for header, value in headers.items():
-        if header == "PROXY-CONNECTION":
-            headers.pop(header)
-            headers["CONNECTION"] = value
-        elif header == "ACCEPT-ENCODING":
-            headers[header] = value.replace('gzip', 'no_gzip_please')
-
-
-# --------------------------- HTTPS ------------------------------
 
 def proxy_https(cl_parser, cl_sock, DB):
     host = cl_parser.get_headers()['host']
@@ -104,12 +87,7 @@ def proxy_https(cl_parser, cl_sock, DB):
     print(CYAN + UNDERLINE + "CLOSED:", host, DEFAULT)
 
     # insert request into database
-    headers = cl_http_parser.get_headers()
-    cleanup_headers(headers)
-    wsgi = cl_http_parser.get_wsgi_environ()
-    str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
-    str_headers += headers_to_string(headers, ['cookie'])
-    str_headers.replace('\r', '')
+    host, method, url, str_headers, cookie = split_request(host, cl_http_parser)
     try:
         response = sv_reply.decode()
     except UnicodeDecodeError:
@@ -119,7 +97,7 @@ def proxy_https(cl_parser, cl_sock, DB):
         post_data = None
     if len(response) > RESPONSE_PREVIEW_LEN:
         response = response[:RESPONSE_PREVIEW_LEN] + '...'
-    DB.insert_request(host, wsgi['REQUEST_METHOD'], host + cl_http_parser.get_url(), str_headers, headers.get('COOKIE').replace(' ', '\n'), post_data, response, True)
+    DB.insert_request(host, method, url, str_headers, cookie, post_data, response, True)
 
 
 def generate_cert(host: str) -> str:

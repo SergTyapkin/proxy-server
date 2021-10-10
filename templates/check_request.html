@@ -2,7 +2,10 @@
 {% block content %}
 
 <body class="m-20">
-    {{ table|safe }}
+    <div class="table-container">
+        {{ table|safe }}
+    </div>
+    <br>
     <form action="" method="get">
         <h1>Проверить запрос на уязвимость</h1>
         <p>

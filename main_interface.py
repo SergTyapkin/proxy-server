@@ -72,6 +72,7 @@ def send_request():
         host = (req[host_start_idx: host_end_idx]).strip()
 
     headers, response = decode_http_request(req, host, secure)
+
     return render_template("response.html", headers=headers, response=response)
 
 
@@ -85,7 +86,7 @@ def get_request_by_id(id):
 
 
 @app.route('/param-miner/<int:id>')
-def check_request_page(id):
+def check_request_by_id(id):
     param_name = request.args.get('param')
     change_what = request.args.get('change')
 
@@ -95,7 +96,8 @@ def check_request_page(id):
         return render_template("check_request.html", table=pretty_req)
 
     change_function = change_param_name if change_what == "name" else change_param_value
-    return check_request(req[1], req[2], req[3], param_name, change_function)
+    result, params = check_request(req[1], compress_to_request(req), req[8], param_name, change_function)
+    return render_template("check_result.html", result=result, params=params)
 
 
 @app.route("/repeat/<int:id>")

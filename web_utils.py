@@ -91,3 +91,25 @@ def http_request(request: (str, bytes), host: str, secure: bool = False, gzip_de
 
 def get_post_data(data: bytes) -> str:
     return data[data.rfind(b'\r\n\r\n') + len(b'\r\n\r\n'):].decode()
+
+
+def split_request(host: str, parser: HttpParser) -> (str, str, str, str, str, str):
+    headers = parser.get_headers()
+    cleanup_headers(headers)
+    wsgi = parser.get_wsgi_environ()
+    str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
+    str_headers += headers_to_string(headers, ['cookie'])
+    str_headers.replace('\r', '')
+    cookie = headers.get('COOKIE')
+    return host, wsgi['REQUEST_METHOD'], host + parser.get_url(), str_headers, cookie.replace(' ', '\n') if cookie else None
+
+
+def cleanup_headers(headers: dict):
+    for header, value in headers.items():
+        if header == "PROXY-CONNECTION":
+            headers.pop(header)
+            headers["CONNECTION"] = value
+        elif header == "ACCEPT-ENCODING":
+            headers[header] = value.replace('gzip', 'no_gzip_please')
+        elif header in ["IF-MODIFIED-SINCE", "IF-NONE-MATCH"]:
+            headers.pop(header)
