@@ -97,7 +97,6 @@ def split_request(host: str, parser: HttpParser) -> (str, str, str, str, str, st
     headers = parser.get_headers()
     cleanup_headers(headers)
     wsgi = parser.get_wsgi_environ()
-    print(wsgi)
     str_headers = wsgi['REQUEST_METHOD'] + " " + wsgi['PATH_INFO'] + " " + wsgi['SERVER_PROTOCOL'] + "\n"
     str_headers += headers_to_string(headers, ['cookie'])
     str_headers.replace('\r', '')

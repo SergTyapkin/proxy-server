@@ -27,7 +27,8 @@ class Database:
             if error.pgcode == "42P04":
                 print("База данных уже существует")
             else:
-                print("Ошибка при создании базы данных", error)
+                print("Ошибка при создании базы данных:")
+                print(error)
                 return
         finally:
             self.cursor.close()
@@ -36,7 +37,8 @@ class Database:
             self.init()
             print("Таблица requests создана")
         except psycopg2.Error as error:
-            print("Ошибка при создании таблицы", error)
+            print("Ошибка при создании таблицы:")
+            print(error)
             return
 
         self.initialized = True

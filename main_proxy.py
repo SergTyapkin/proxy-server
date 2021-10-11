@@ -106,13 +106,28 @@ def generate_cert(host: str) -> str:
     if os.path.exists(cert_full_path):
         return cert_full_path
 
+    conf_full_path = generate_cert_config(host)
+
     uid = int(time.time() * 100000)
     subprocess.call(
-        'openssl req -new -key cert.key -subj "/CN=%s" -sha256 | ' % (host) +
-        'openssl x509 -req -days 3650 -CA ca.crt -CAkey ca.key -set_serial %s -out %s' % (
-            uid, cert_full_path), shell=True)
+        f'openssl req -new -key cert.key -subj "/CN={host}" -sha256 | ' +
+        f'openssl x509 -req -days 3650 -CA ca.crt -CAkey ca.key -set_serial {uid} -out {cert_full_path} ' +
+                     f'-extensions v3_ca -extfile {conf_full_path}',
+        shell=True)
 
     return cert_full_path
+
+
+def generate_cert_config(host: str) -> str:
+    conf_path = CERT_DIR + host + ".cnf"
+    if os.path.exists(conf_path):
+        return conf_path
+
+    with open(conf_path, 'w') as fp:
+        fp.write(f"""[ v3_ca ]
+        subjectAltName = DNS:{host}
+        """)
+    return conf_path
 
 
 if __name__ == "__main__":
