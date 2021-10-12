@@ -6,6 +6,8 @@
     <h1>{{ host }}</h1>
 
     <h3>Проверено: <span id="counter">{{ count }}</span> из <span>{{ max_count }}</span></h3>
+    <ul id="found-exploits" class="list">
+    </ul>
 
     <div id="wrapper" class="list-wrapper">Подробно...</div>
     <div id="list" class="list">
@@ -28,6 +30,7 @@
 </body>
 
 <script>
+    exploits = document.getElementById('found-exploits');
     counter = document.getElementById('counter');
     result = document.getElementById('result');
     wrapper = document.getElementById('wrapper');
@@ -46,14 +49,25 @@
 </script>
 
 <script>
+    const allParams = [];
     const loop = setInterval(async () => {
-        const response = await fetch(location.href, { method: 'POST' });
-        console.log(response)
+        let response;
+        try {
+            response = await fetch(location.href, {method: 'POST'});
+        } catch {
+            if (result.innerText === 'Прокерка идет') {
+                result.innerText = 'Проверка окончена';
+            }
+            result.innerText += '. Соединение разорвано';
+
+            clearInterval(loop);
+        }
+        console.log(response);
 
         const json = await response.json();
-        console.log(json)
         result.innerText = json.result;
-        listContent.innerHTML = '';
+        const children = listContent.children.length
+        json.params.splice(0, children);
         json.params.forEach((pair) => {
             const param = pair[0];
             const code = +pair[1];
@@ -65,10 +79,13 @@
             }
             newParam.innerText = param;
             listContent.appendChild(newParam);
+            if (code !== 0) {
+                exploits.appendChild(newParam);
+            }
             if (wrapper.classList.contains('opened')) {
                 list.style.maxHeight = listContent.clientHeight + 'px';
             }
-            counter.innerText = json.params.length
+            counter.innerText = children + json.params.length;
         });
 
         if (!response.ok) {

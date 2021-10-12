@@ -1,3 +1,4 @@
+import gzip
 import threading
 from itertools import islice
 
@@ -20,28 +21,28 @@ def change_param_value(request, param_name, param_value):
     if url.find('?') == -1:  # no query-params
         url += "?" + param_name + "=" + param_value
     else:
-        if url.find(param_name) == -1:  # param not in url
-            url += "&" + param_name + "=" + param_value
-        else:  # param in url
-            url, query = url.split('?')
-            query = str_between(query, param_name + '=', ['&', '\n', ' '], replace_to=param_value)
-            url += "?" + query
+        url, query = url.split('?')
+        queryParams = query.split('&')
+        found = False
+        query = ''
+        for queryParam in queryParams:
+            splitted = queryParam.split('=')
+            name = splitted[0]
+            value = splitted[1]
+            if name == param_name:
+                value = param_value
+                found = True
+            query += name + '=' + value + '&'
+        query = query[:-1]
+
+        if not found:  # param not in query
+            query += "&" + param_name + "=" + param_value
+        url += "?" + query
     return request[:url_start_idx] + " " + url + " " + request[url_end_idx:], url
 
 
 def change_param_name(request, param_name, new_param_name):
-    url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
-    url = url.strip()
-    if url.find('?') == -1:  # no query-params
-        url += "?" + new_param_name + "=" + param_name
-    else:
-        url, query = url.split('?')
-        if query.find(new_param_name) == -1:  # param not in query
-            query += "&" + new_param_name + "=" + param_name
-        else:  # param in url
-            query = str_between(query, new_param_name + '=', ['&', '\n', ' '], replace_to=param_name)
-        url += "?" + query
-    return request[:url_start_idx] + " " + url + " " + request[url_end_idx:], url
+    return change_param_value(request, new_param_name, param_name)
 
 
 def check_request(host: str, request: str, secure: bool, param_name: str, check_function, result, params, isFinished):
@@ -67,6 +68,7 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
                 result[0] = "Скорее всего, запрос уязвим"
                 params += [("Не удалось начать проверку, но:", 1),
                            (url + " - Найдено \"" + good_param + "\" в ответе!", 2)]
+                isFinished[0] = True
                 return
             result[0] = "Не получается начать проверку"
             params += [("Ответы должны быть одинаковы", 1),
@@ -75,6 +77,7 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
                        ("", 1),
                        ("А на запрос:", 1), (cur_request, 0),
                        ("Ответ: ", 1), (str(reply), 0)]
+            isFinished[0] = True
             return
 
     found_exploits = [False]  # to make mutable
@@ -106,6 +109,13 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
                     cur_result = [url + " - Отличается длина", 1]
                 else:
                     cur_result = [url + " - OK", 0]
+
+                encodings = parser.get_headers().get('CONTENT-ENCODING')
+                if encodings and (encodings.find('gzip') != -1):
+                    try:
+                        reply = gzip.decompress(reply)
+                    except:
+                        pass
 
                 if found and (reply.find(param_name.encode()) != -1):
                     cur_result[0] += ". Найдено \"" + param_name + "\" в ответе!"
