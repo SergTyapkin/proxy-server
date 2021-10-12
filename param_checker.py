@@ -10,45 +10,41 @@ good_values = [
     "waefqgse",
 ]
 
-FILENAME = "small_param_samples.txt"
+FILENAME = "param_samples.txt"
 THREADS = 20
 
 
 def change_param_value(request, param_name, param_value):
     url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
     url = url.strip()
-    param_idx = url.find(param_name)
-    if param_idx == -1:  # param not in url
-        if url.find("?") == -1:  # no query-params
-            url += "?"
-        else:
-            url += "&"
-        url += param_name + "=" + param_value
-    else:  # param in url
-        url, _, _ = str_between(url, param_name, ['\n', '&', '?'], param_value)
+    if url.find('?') == -1:  # no query-params
+        url += "?" + param_name + "=" + param_value
+    else:
+        if url.find(param_name) == -1:  # param not in url
+            url += "&" + param_name + "=" + param_value
+        else:  # param in url
+            url, query = url.split('?')
+            query = str_between(query, param_name + '=', ['&', '\n', ' '], replace_to=param_value)
+            url += "?" + query
     return request[:url_start_idx] + " " + url + " " + request[url_end_idx:], url
 
 
 def change_param_name(request, param_name, new_param_name):
     url, url_start_idx, url_end_idx = str_between(request, "GET", "HTTP")
     url = url.strip()
-    if url.find(new_param_name) == -1:  # param not in url
-        if url.find("?") == -1:  # no query-params
-            url += "?"
-        else:
-            url += "&"
-        url += new_param_name + "=" + param_name
-    else:  # param in url
-        if url.find("?") == -1:
-            url += "?" + new_param_name + "=" + param_name
-        else:
-            url, query = url.split('?')
+    if url.find('?') == -1:  # no query-params
+        url += "?" + new_param_name + "=" + param_name
+    else:
+        url, query = url.split('?')
+        if query.find(new_param_name) == -1:  # param not in query
+            query += "&" + new_param_name + "=" + param_name
+        else:  # param in url
             query = str_between(query, new_param_name + '=', ['&', '\n', ' '], replace_to=param_name)
-            url += query
+        url += "?" + query
     return request[:url_start_idx] + " " + url + " " + request[url_end_idx:], url
 
 
-def check_request(host: str, request: str, secure: bool, param_name: str, check_function, result, params):
+def check_request(host: str, request: str, secure: bool, param_name: str, check_function, result, params, isFinished):
     normal_reply = None
     normal_request = None
     normal_len = None
@@ -56,13 +52,12 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
     for good_param in good_values:
         cur_request, url = check_function(request, param_name, good_param)
         response, parser = http_request(cur_request, host, secure)
-        if not response:
-            result[0] = "Не удалось начать проверку"
-            params[0] = [("Сервер отвечает пустыми ответами", 1)]
-            return
         splitted_response = response.split(b'\r\n\r\n')
         reply = splitted_response[1] if len(splitted_response) >= 2 else b''
-        cur_len = int(parser.get_headers().get('content-length'))
+        try:
+            cur_len = int(parser.get_headers().get('content-length'))
+        except TypeError:
+            cur_len = 0
         if not normal_reply:
             normal_reply = reply
             normal_request = cur_request
@@ -70,16 +65,16 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
         elif reply != normal_reply or cur_len != normal_len:
             if reply.find(good_param.encode()) != -1:
                 result[0] = "Скорее всего, запрос уязвим"
-                params[0] = [("Не удалось начать проверку, но:", 1),
-                             (url + " - Найдено \"" + good_param + "\" в ответе!", 2)]
+                params += [("Не удалось начать проверку, но:", 1),
+                           (url + " - Найдено \"" + good_param + "\" в ответе!", 2)]
                 return
             result[0] = "Не получается начать проверку"
-            params[0] = [("Ответы должны быть одинаковы", 1),
-                         ("Но на запрос:", 1), (normal_request, 0),
-                         ("Ответ: ", 1), (str(normal_reply), 0),
-                         ("", 1),
-                         ("А на запрос:", 1), (cur_request, 0),
-                         ("Ответ: ", 1), (str(reply), 0)]
+            params += [("Ответы должны быть одинаковы", 1),
+                       ("Но на запрос:", 1), (normal_request, 0),
+                       ("Ответ: ", 1), (str(normal_reply), 0),
+                       ("", 1),
+                       ("А на запрос:", 1), (cur_request, 0),
+                       ("Ответ: ", 1), (str(reply), 0)]
             return
 
     found_exploits = [False]  # to make mutable
@@ -98,7 +93,10 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
                 response, parser = http_request(cur_request, host, secure)
                 splitted_response = response.split(b'\r\n\r\n')
                 reply = splitted_response[1] if len(splitted_response) >= 2 else b''
-                cur_len = int(parser.get_headers().get('content-length'))
+                try:
+                    cur_len = int(parser.get_headers().get('content-length'))
+                except TypeError:
+                    cur_len = 0
                 found = False
                 if reply != normal_reply:
                     found = True
@@ -116,6 +114,7 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
                 mutex.acquire()
                 if found:
                     found_exploits[0] = True
+                    result[0] = "Найдены уязвимости!"
                 params.append(cur_result)
                 mutex.release()
 
@@ -136,11 +135,10 @@ def check_request(host: str, request: str, secure: bool, param_name: str, check_
         for cur_thread in threads:
             cur_thread.join()
 
-        print("I ENDS!")
         if not found_exploits[0]:
             result[0] = "Уязвимостей не обнаружено"
-            return
-        result[0] = "Найдены уязвимости!"
+
+        isFinished[0] = True
         return
 
     threading.Thread(target=daemon).start()

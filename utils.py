@@ -4,7 +4,7 @@ import json
 def str_between(string: (str, bytes), start: (str, bytes), end: (str, bytes), replace_to: (str, bytes) = None):
     end_idx = start_idx = string.find(start) + len(start)
     if isinstance(end, list):
-        while string[end_idx] not in end and end_idx < len(string):
+        while end_idx < len(string) and string[end_idx] not in end:
             end_idx += 1
     else:
         end_idx = string.find(end)

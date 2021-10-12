@@ -88,7 +88,6 @@ def get_request_by_id(id):
 _checks = []
 @app.route('/param-miner/<int:id>', methods=['GET', 'POST'])
 def check_request_by_id(id):
-    print(_checks)
     param_name = request.args.get('param')
     change_what = request.args.get('change')
 
@@ -97,9 +96,9 @@ def check_request_by_id(id):
     if not param_name or not change_what:
         return render_template("check_request.html", table=pretty_req, id=id)
 
-    max_len = count_lines("small_param_samples.txt")
+    max_len = count_lines("param_samples.txt")
 
-    check = [id, param_name, change_what, ["Проверка началась"], []]
+    check = [id, param_name, change_what, ["Проверка началась"], [], [False]]
     found_idx = None
     found = False
     for i in range(len(_checks)):
@@ -110,12 +109,11 @@ def check_request_by_id(id):
             found = True
             break
     if found:
-        params = check[4]
         response = jsonify(
             result=check[3][0],
-            params=params
+            params=check[4]
         )
-        if len(params) >= max_len:
+        if check[5][0]:  # if finished
             _checks.pop(found_idx)
             response.status_code = 400
         if request.method == 'POST':
@@ -125,13 +123,14 @@ def check_request_by_id(id):
 
     if not found:
         change_function = change_param_name if change_what == "name" else change_param_value
-        check_request(req[1], compress_to_request(req), req[8], param_name, change_function, check[3], check[4])
+        check_request(req[1], compress_to_request(req), req[8], param_name, change_function, check[3], check[4], check[5])
     return render_template("check_result.html", result=check[3][0], params=check[4], id=id, host=req[1],
                            port=config['web_interface_port'], count=len(check[4]), max_count=max_len)
 
 
 @app.route("/repeat/<int:id>")
 def repeat_request(id):
+    req, _ = DB.select_request_by_id(id)
     req, _ = DB.select_request_by_id(id)
 
     headers, response = decode_http_request(compress_to_request(req), req[1], req[8])
