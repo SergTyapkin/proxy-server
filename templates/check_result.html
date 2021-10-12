@@ -2,12 +2,10 @@
 {% block content %}
 
 <body class="m-20">
-    <h1>
-        {{ result }}
-        <br>
-        {{ host }}
-    </h1>
+    <h1 id="result">{{ result }}</h1>
+    <h1>{{ host }}</h1>
 
+    <h3>Проверено: <span id="counter">{{ count }}</span> из <span>{{ max_count }}</span></h3>
 
     <div id="wrapper" class="list-wrapper">Подробно...</div>
     <div id="list" class="list">
@@ -30,6 +28,8 @@
 </body>
 
 <script>
+    counter = document.getElementById('counter');
+    result = document.getElementById('result');
     wrapper = document.getElementById('wrapper');
     list = document.getElementById('list');
     listContent = document.getElementById('list-content');
@@ -38,7 +38,6 @@
         if (wrapper.classList.contains('opened')) {
             wrapper.classList.remove('opened');
             list.style.maxHeight = '10px';
-
         } else {
             wrapper.classList.add('opened');
             list.style.maxHeight = listContent.clientHeight + 'px';
@@ -46,4 +45,35 @@
     });
 </script>
 
+<script>
+    const loop = setInterval(async () => {
+        const response = await fetch(location.href, { method: 'POST' });
+        console.log(response)
+
+        const json = await response.json();
+        console.log(json)
+        result.innerText = json.result;
+        listContent.innerHTML = '';
+        json.params.forEach((pair) => {
+            const param = pair[0];
+            const code = +pair[1];
+            const newParam = document.createElement('li');
+            if (code === 2) {
+                newParam.classList.add('error');
+            } else if (code === 1) {
+                newParam.classList.add('warning');
+            }
+            newParam.innerText = param;
+            listContent.appendChild(newParam);
+            if (wrapper.classList.contains('opened')) {
+                list.style.maxHeight = listContent.clientHeight + 'px';
+            }
+            counter.innerText = json.params.length
+        });
+
+        if (!response.ok) {
+            clearInterval(loop)
+        }
+    }, 1000);
+</script>
 {% endblock %}

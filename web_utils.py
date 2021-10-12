@@ -110,7 +110,7 @@ def cleanup_headers(headers: dict):
         if header == "PROXY-CONNECTION":
             headers.pop(header)
             headers["CONNECTION"] = value
-        elif header == "ACCEPT-ENCODING":
-            headers[header] = value.replace('gzip', 'no_gzip_please')
+        # elif header == "ACCEPT-ENCODING":
+        #    headers[header] = value.replace('gzip', 'no_gzip_please')
         elif header in ["IF-MODIFIED-SINCE", "IF-NONE-MATCH"]:
             headers.pop(header)
