@@ -16,7 +16,7 @@
 #Запуск:
 
 Сначала нужно добавить сертификат ca.crt в доверенные. Сделать это можно командой консоли:
-* Windows: `certmgr -add ca.crt -s Root -all`
+* Windows: `certmgr -add ca.crt -s Root -all` (не всегда срабатывает. Лучше просто открыть файл ca.crt)
 * Unix: `sudo cp ca.crt /etc/ssl/certs/ && sudo update-ca-certificates`
 
 Запуск прокси:
