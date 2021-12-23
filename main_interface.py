@@ -1,16 +1,17 @@
 from urllib.parse import quote_plus
 
-from flask import Flask, render_template, request, Markup, jsonify
+from flask import Flask, render_template, request, Markup
 from database import Database
 
-from param_checker import *
 from utils import *
 from web_utils import *
 
 from blueprints.options.routes import app as options_app
+from blueprints.param_miner.routes import app as param_miner_app
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.register_blueprint(options_app, url_prefix='/options')
+app.register_blueprint(param_miner_app, url_prefix='/param-miner')
 config = read_config("config.json")
 DB = Database(config)
 
@@ -38,15 +39,6 @@ def decode_http_request(req, host, secure):
         except UnicodeDecodeError:
             response = ["Не удалось раскодировать тело ответа:", reply[response_start_idx:]]
     return headers, response
-
-
-def compress_to_request(req: list) -> str:
-    req_body = req[4]  # headers
-    if req[5]:  # cookie
-        req_body += "COOKIE: " + req[5].replace('\n', ' ') + '\n'
-    if req[6]:  # post_data
-        req_body += '\n' + req[6]
-    return req_body
 
 
 @app.route('/')
@@ -81,60 +73,17 @@ def send_request():
 
 @app.route('/request/<int:id>')
 def get_request_by_id(id):
-    req, table_headers = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
+    req, table_headers = DB.execute_return_one(DB.SELECT_REQUEST_BY_ID, [id])
     req[7] = Markup.escape(req[7])  # Escape tags in response
     pretty_req = html_prettify(table_headers, [req], True)
     return render_template("request.html", table=pretty_req, id=id, host=req[1],
                            request=quote_plus(compress_to_request(req)), protocol='https' if req[8] else 'http')
 
 
-_checks = []
-@app.route('/param-miner/<int:id>', methods=['GET', 'POST'])
-def check_request_by_id(id):
-    param_name = request.args.get('param')
-    change_what = request.args.get('change')
-
-    req, table_headers = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
-    pretty_req = html_prettify(table_headers, [req], True, lambda idx: f"window.location.href='/request/{idx}'")
-    if not param_name or not change_what:
-        return render_template("check_request.html", table=pretty_req, id=id)
-
-    max_len = count_lines("param_samples.txt")
-
-    check = [id, param_name, change_what, ["Проверка еще идет"], [], [False]]
-    found_idx = None
-    found = False
-    for i in range(len(_checks)):
-        cur_check = _checks[i]
-        if id == cur_check[0] and param_name == cur_check[1] and change_what == cur_check[2]:
-            found_idx = i
-            check = cur_check
-            found = True
-            break
-    if found:
-        response = jsonify(
-            result=check[3][0],
-            params=check[4]
-        )
-        if check[5][0]:  # if finished
-            _checks.pop(found_idx)
-            response.status_code = 400
-        if request.method == 'POST':
-            return response
-    else:
-        _checks.append(check)
-
-    if not found:
-        change_function = change_param_name if change_what == "name" else change_param_value
-        check_request(req[1], compress_to_request(req), req[8], param_name, change_function, check[3], check[4], check[5])
-    return render_template("check_result.html", result=check[3][0], params=check[4], id=id, host=req[1],
-                           port=config['web_interface_port'], count=len(check[4]), max_count=max_len)
-
-
 @app.route("/repeat/<int:id>")
 def repeat_request(id):
-    req, _ = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
-    req, _ = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
+    req, _ = DB.execute_return_one(DB.SELECT_REQUEST_BY_ID, [id])
+    req, _ = DB.execute_return_one(DB.SELECT_REQUEST_BY_ID, [id])
 
     headers, response = decode_http_request(compress_to_request(req), req[1], req[8])
     return render_template("response.html", headers=headers, response=response)
@@ -146,7 +95,6 @@ def show_404(_):
     return "<h1>Страница не найдена</h1>" \
            "<button onclick=\"document.location='/'\">На главную</button>"
 '''
-
 
 if __name__ == '__main__':
     app.run(port=config['web_interface_port'])

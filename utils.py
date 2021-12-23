@@ -1,6 +1,15 @@
 import json
 
 
+def compress_to_request(req: list) -> str:
+    req_body = req[4]  # headers
+    if req[5]:  # cookie
+        req_body += "COOKIE: " + req[5].replace('\n', ' ') + '\n'
+    if req[6]:  # post_data
+        req_body += '\n' + req[6]
+    return req_body
+
+
 def str_between(string: (str, bytes), start: (str, bytes), end: (str, bytes), replace_to: (str, bytes) = None):
     end_idx = start_idx = string.find(start) + len(start)
     if isinstance(end, list):

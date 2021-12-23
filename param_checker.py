@@ -3,7 +3,7 @@ import threading
 from itertools import islice
 
 from main_proxy import http_request
-from utils import str_between, count_lines
+from utils import str_between, count_lines, read_config
 
 good_values = [
     "asfdgbgfvasdcxvbb",
@@ -12,7 +12,7 @@ good_values = [
 ]
 
 FILENAME = "param_samples.txt"
-THREADS = 20
+THREADS = read_config('config.json')['threads_for_check']
 
 
 def change_param_value(request, param_name, param_value):

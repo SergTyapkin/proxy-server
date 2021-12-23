@@ -56,7 +56,7 @@ def proxy_http(cl_parser, cl_sock, DB: Database, post_data):
         post_data = None
     if len(response) > RESPONSE_PREVIEW_LEN:
         response = response[:RESPONSE_PREVIEW_LEN] + '...'
-    DB.execute(DB.INSERT_REQUEST, [host, method, url, str_headers, cookie, post_data, response])
+    DB.execute(DB.INSERT_REQUEST, [host, method, url, str_headers, cookie, post_data, response, False])
 
 
 def proxy_https(cl_parser, cl_sock, DB: Database):

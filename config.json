@@ -7,5 +7,7 @@
   "db_port": 5432,
   "db_database": "proxy_server",
 
-  "web_interface_port": 8000
+  "web_interface_port": 8000,
+
+  "threads_for_check": 20
 }
