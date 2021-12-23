@@ -30,11 +30,6 @@ def read_config(filepath: str) -> dict:
 def count_lines(filename, chunk_size=4096):
     with open(filename) as file:
         return sum(chunk.count('\n') for chunk in iter(lambda: file.read(chunk_size), ''))
-    '''count = 0
-    with open(filename) as file:
-        chunk = file.read(chunk_size)
-        while chunk:
-            count += chunk.count('\n')'''
 
 
 def html_prettify(headers: list, body: list, multilines: bool = False, row_onclick=None) -> str:

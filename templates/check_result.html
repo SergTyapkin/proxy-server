@@ -55,7 +55,7 @@
         try {
             response = await fetch(location.href, {method: 'POST'});
         } catch {
-            if (result.innerText === 'Прокерка идет') {
+            if (result.innerText === 'Проверка идет') {
                 result.innerText = 'Проверка окончена';
             }
             result.innerText += '. Соединение разорвано';

@@ -81,14 +81,25 @@ form input,
 form textarea {
     background: linear-gradient(-40deg, #2c2f36 0%, #47244f 50%, #3f3230 100%);
     font-weight: normal;
+    box-shadow: 0 0 5px black inset;
+    outline: none;
+    border: none;
+    border-radius: 3px;
+    margin: 5px 0;
+    padding: 5px 8px;
+    width: calc(100% - 16px);
+    transition: box-shadow linear 0.2s;
+}
+form input:focus,
+form textarea:focus {
+    box-shadow: 0 0 8px black inset;
+    outline: #00000020 2px solid;
 }
 form input {
     width: 50%;
-    padding: 3px 5px;
 }
 form textarea {
     resize: vertical;
-    width: 100%;
     height: 320px;
 }
 form input:disabled {
@@ -313,6 +324,10 @@ label.checkbox::before {
     max-height: 10px;
     transition: max-height 0.3s ease;
 }
+.list-wrapper.opened {
+    letter-spacing: 3px;
+}
+
 .warning {
     font-size: 18px;
     color: #e8b94e;
@@ -361,8 +376,4 @@ ul {
     .list-wrapper:hover {
         opacity: 1;
     }
-}
-
-.list-wrapper.opened {
-    letter-spacing: 3px;
 }

@@ -98,7 +98,7 @@ def check_request_by_id(id):
 
     max_len = count_lines("param_samples.txt")
 
-    check = [id, param_name, change_what, ["Проверка идет"], [], [False]]
+    check = [id, param_name, change_what, ["Проверка еще идет"], [], [False]]
     found_idx = None
     found = False
     for i in range(len(_checks)):
