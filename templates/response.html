@@ -1,11 +1,5 @@
-<!DOCTYPE html>
-<html lang="en" xmlns="http://www.w3.org/1999/html">
-<head>
-    <meta charset="UTF-8">
-    <title>Proxy web interface</title>
-    <link rel="icon" type="image/x-icon" href="/static/favicon.ico">
-    <link href="/static/styles.css" rel="stylesheet">
-</head>
+{% extends "template.html" %}
+{% block content %}
 
 <body class="m-20">
     <button onclick="document.location='/'">На главную</button>
@@ -50,4 +44,4 @@
     });
 </script>
 
-</html>
+{% endblock %}

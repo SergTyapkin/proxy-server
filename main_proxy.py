@@ -25,7 +25,7 @@ RESPONSE_PREVIEW_LEN = 400
 # sv_... is remote web-server variables
 
 
-def proxy_http(cl_parser, cl_sock, DB, post_data):
+def proxy_http(cl_parser, cl_sock, DB: Database, post_data):
     headers = cl_parser.get_headers()
     if len(headers.keys()) < 2:
         cl_sock.close()
@@ -56,10 +56,10 @@ def proxy_http(cl_parser, cl_sock, DB, post_data):
         post_data = None
     if len(response) > RESPONSE_PREVIEW_LEN:
         response = response[:RESPONSE_PREVIEW_LEN] + '...'
-    DB.insert_request(host, method, url, str_headers, cookie, post_data, response)
+    DB.execute(DB.INSERT_REQUEST, [host, method, url, str_headers, cookie, post_data, response])
 
 
-def proxy_https(cl_parser, cl_sock, DB):
+def proxy_https(cl_parser, cl_sock, DB: Database):
     host = cl_parser.get_headers()['host']
     host = host[:host.find(':')].rstrip('/')
 
@@ -97,7 +97,7 @@ def proxy_https(cl_parser, cl_sock, DB):
         post_data = None
     if len(response) > RESPONSE_PREVIEW_LEN:
         response = response[:RESPONSE_PREVIEW_LEN] + '...'
-    DB.insert_request(host, method, url, str_headers, cookie, post_data, response, True)
+    DB.execute(DB.INSERT_REQUEST, [host, method, url, str_headers, cookie, post_data, response, True])
 
 
 def generate_cert(host: str) -> str:

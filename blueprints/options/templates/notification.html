@@ -1,0 +1,20 @@
+{% extends "template.html" %}
+{% block content %}
+
+<body class="m-20">
+    <button class="m-20" style="margin-left: 0" onclick="document.location='/'">На главную</button>
+
+    <div id="headers" class="headers">
+        {% for header in headers %}
+            {{ header }}<br>
+        {% endfor %}
+    </div>
+    <br>
+    <div id="response" class="response">
+        {% for string in response %}
+            {{ string }}<br>
+        {% endfor %}
+    </div>
+</body>
+
+{% endblock %}

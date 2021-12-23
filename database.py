@@ -34,7 +34,9 @@ class Database:
             self.cursor.close()
 
         try:
-            self.init()
+            cur = self.db.cursor()
+            cur.execute(self.INIT)
+            cur.close()
             print("Таблица requests создана")
         except psycopg2.Error as error:
             print("Ошибка при создании таблицы:")
@@ -43,39 +45,33 @@ class Database:
 
         self.initialized = True
 
-    def insert_request(self, host: str, method: str, url: str, headers: str, cookie: str, post_data: str, response: str, tls: bool = False):
+    def execute(self, request: str, args: list = []):
         if not self.initialized:
             print("База данных не была инициализирована. Операция отменена")
             return
         cur = self.db.cursor()
-        cur.execute("INSERT INTO requests(host, method, url, headers, cookie, post_data, response, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)",
-                    [host, method, url, headers, cookie, post_data, response, tls])
+        cur.execute(request, args)
         cur.close()
 
-    def select_all_requests(self):
+    def execute_return(self, request: str, args: list = []):
+        if not self.initialized:
+            print("База данных не была инициализирована. Операция отменена")
+            return
         cur = self.db.cursor()
-        cur.execute("SELECT id, host, method, url, headers, cookie, post_data, Has_TLS FROM requests ORDER BY id DESC LIMIT 500")
+        cur.execute(request, args)
         return cur.fetchall(), [desc[0] for desc in cur.description]
 
-    def select_request_by_id(self, id):
-        cur = self.db.cursor()
-        cur.execute("SELECT id, host, method, url, headers, cookie, post_data, response, Has_TLS FROM requests WHERE id=%s", [id])
-        return list(cur.fetchone()), [desc[0] for desc in cur.description]
+    INSERT_REQUEST = "INSERT INTO requests(host, method, url, headers, cookie, post_data, response, Has_TLS) VALUES(%s, %s, %s, %s, %s, %s, %s, %s)"
 
-    def clear(self):
-        cur = self.db.cursor()
-        cur.execute("TRUNCATE TABLE requests")
-        cur.close()
+    SELECT_ALL_REQUESTS = "SELECT id, host, method, url, headers, cookie, post_data, Has_TLS FROM requests ORDER BY id DESC LIMIT 500"
 
-    def drop(self):
-        cur = self.db.cursor()
-        cur.execute("DROP TABLE IF EXISTS requests")
-        cur.close()
+    SELECT_REQUEST_BY_ID = "SELECT id, host, method, url, headers, cookie, post_data, response, Has_TLS FROM requests WHERE id=%s"
 
-    def init(self):
-        cur = self.db.cursor()
-        cur.execute(
-            """CREATE TABLE IF NOT EXISTS requests (
+    CLEAR = "TRUNCATE TABLE requests"
+
+    DROP = "DROP TABLE IF EXISTS requests"
+
+    INIT = """CREATE TABLE IF NOT EXISTS requests (
                 id        SERIAL PRIMARY KEY,
                 host      TEXT NOT NULL,
                 method    TEXT NOT NULL,
@@ -85,5 +81,4 @@ class Database:
                 post_data TEXT,
                 has_tls   BOOLEAN DEFAULT FALSE,
                 response  TEXT
-            );""")
-        cur.close()
+            );"""

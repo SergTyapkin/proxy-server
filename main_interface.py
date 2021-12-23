@@ -1,13 +1,16 @@
 from urllib.parse import quote_plus
 
 from flask import Flask, render_template, request, Markup, jsonify
-from database import *
+from database import Database
 
 from param_checker import *
 from utils import *
 from web_utils import *
 
+from blueprints.options.routes import app as options_app
+
 app = Flask(__name__, static_folder="static", static_url_path="/static")
+app.register_blueprint(options_app, url_prefix='/options')
 config = read_config("config.json")
 DB = Database(config)
 
@@ -48,7 +51,7 @@ def compress_to_request(req: list) -> str:
 
 @app.route('/')
 def get_requests():
-    req, table_headers = DB.select_all_requests()
+    req, table_headers = DB.execute_return(DB.SELECT_ALL_REQUESTS)
     pretty_req = html_prettify(table_headers, req, True, lambda idx: f"window.location.href='/request/{idx}'")
     return render_template("requests.html", table=pretty_req)
 
@@ -78,7 +81,7 @@ def send_request():
 
 @app.route('/request/<int:id>')
 def get_request_by_id(id):
-    req, table_headers = DB.select_request_by_id(id)
+    req, table_headers = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
     req[7] = Markup.escape(req[7])  # Escape tags in response
     pretty_req = html_prettify(table_headers, [req], True)
     return render_template("request.html", table=pretty_req, id=id, host=req[1],
@@ -91,7 +94,7 @@ def check_request_by_id(id):
     param_name = request.args.get('param')
     change_what = request.args.get('change')
 
-    req, table_headers = DB.select_request_by_id(id)
+    req, table_headers = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
     pretty_req = html_prettify(table_headers, [req], True, lambda idx: f"window.location.href='/request/{idx}'")
     if not param_name or not change_what:
         return render_template("check_request.html", table=pretty_req, id=id)
@@ -130,29 +133,11 @@ def check_request_by_id(id):
 
 @app.route("/repeat/<int:id>")
 def repeat_request(id):
-    req, _ = DB.select_request_by_id(id)
-    req, _ = DB.select_request_by_id(id)
+    req, _ = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
+    req, _ = DB.execute_return(DB.SELECT_REQUEST_BY_ID, [id])
 
     headers, response = decode_http_request(compress_to_request(req), req[1], req[8])
     return render_template("response.html", headers=headers, response=response)
-
-
-@app.route("/options")
-def options():
-    return render_template("options.html")
-
-
-@app.route("/clear_db")
-def clear_db():
-    DB.clear()
-    return render_template("response.html", headers=["База данных успешно очищена"], response=["А вот так вот просто, да"])
-
-
-@app.route("/reset_db")
-def reset_db():
-    DB.drop()
-    DB.init()
-    return render_template("response.html", headers=["База данных успешно пересоздана"], response=["А вот теперь индексы с 1 начнутся"])
 
 
 '''
